@@ -1,4 +1,4 @@
-//! Twenty-four courses — HUD shows level number 1..=24.
+//! Twenty-six courses — HUD shows level number 1..=26.
 //!
 //! Terrain variety (difficulty still rises overall through 16):
 //! - Flat: 1, 2, 9
@@ -7,15 +7,19 @@
 //! - Mixed jumps + gradients: 8, 13, 16
 //! - Gravity flip + revert (2 flips): 17–21
 //! - Multi gravity flips (3 / 4 / 5): 22–24
+//! - Moving spikes: 25–26
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Kind {
     Spike,
+    /// Spike that slides horizontally around `x` over a short range.
+    MovingSpike,
     Block,
 }
 
 #[derive(Clone, Copy)]
 pub struct Obstacle {
+    /// Anchor X (home for moving spikes).
     pub x: i32,
     pub kind: Kind,
 }
@@ -45,10 +49,32 @@ pub struct Level {
     pub obstacles: &'static [Obstacle],
 }
 
-pub const LEVEL_COUNT: usize = 24;
+pub const LEVEL_COUNT: usize = 26;
 pub const BASE_Y: i32 = 34;
 /// Block / full-jump ledge height.
 pub const STEP: i32 = 8;
+
+/// Horizontal travel (±) for [`Kind::MovingSpike`].
+pub const MOVE_SPIKE_AMP: i32 = 8;
+/// Frames for a full back-and-forth cycle.
+pub const MOVE_SPIKE_PERIOD: i32 = 48;
+
+impl Obstacle {
+    /// World X used for draw / collision this frame.
+    pub fn world_x(&self, tick: u32) -> i32 {
+        match self.kind {
+            Kind::Spike | Kind::Block => self.x,
+            Kind::MovingSpike => {
+                let t = (tick as i32)
+                    .wrapping_add(self.x.wrapping_mul(3))
+                    .rem_euclid(MOVE_SPIKE_PERIOD);
+                let half = MOVE_SPIKE_PERIOD / 2;
+                let tri = if t <= half { t } else { MOVE_SPIKE_PERIOD - t };
+                self.x - MOVE_SPIKE_AMP + (tri * 2 * MOVE_SPIKE_AMP) / half
+            }
+        }
+    }
+}
 
 impl Level {
     /// World X of flip index `i` (0..gravity_flips), evenly spaced with end margins.
@@ -1045,6 +1071,71 @@ const O24: &[Obstacle] = &[
     Obstacle { x: 1340, kind: Kind::Spike },
 ];
 
+// --- Level 25: moving-spike intro (mix of static + sliding) ---
+const T25: &[TerrainKey] = &[
+    TerrainKey { x: 0, y: Y0 },
+    TerrainKey { x: 200, y: Y0 },
+    TerrainKey { x: 280, y: 28 },
+    TerrainKey { x: 400, y: Y0 },
+    TerrainKey { x: 520, y: 26 },
+    TerrainKey { x: 640, y: Y0 },
+    TerrainKey { x: 760, y: 28 },
+    TerrainKey { x: 880, y: Y0 },
+    TerrainKey { x: 960, y: Y0 },
+];
+const O25: &[Obstacle] = &[
+    Obstacle { x: 60, kind: Kind::Spike },
+    Obstacle { x: 120, kind: Kind::MovingSpike },
+    Obstacle { x: 180, kind: Kind::Block },
+    Obstacle { x: 240, kind: Kind::Spike },
+    Obstacle { x: 320, kind: Kind::MovingSpike },
+    Obstacle { x: 380, kind: Kind::Spike },
+    Obstacle { x: 440, kind: Kind::Block },
+    Obstacle { x: 500, kind: Kind::MovingSpike },
+    Obstacle { x: 560, kind: Kind::Spike },
+    Obstacle { x: 620, kind: Kind::MovingSpike },
+    Obstacle { x: 700, kind: Kind::Block },
+    Obstacle { x: 740, kind: Kind::Spike },
+    Obstacle { x: 800, kind: Kind::MovingSpike },
+    Obstacle { x: 860, kind: Kind::Spike },
+    Obstacle { x: 920, kind: Kind::MovingSpike },
+];
+
+// --- Level 26: denser movers on stepped shelves ---
+const T26: &[TerrainKey] = &[
+    TerrainKey { x: 0, y: Y0 },
+    TerrainKey { x: 120, y: Y1 },
+    TerrainKey { x: 280, y: Y0 },
+    TerrainKey { x: 400, y: Y1 },
+    TerrainKey { x: 520, y: Y2 },
+    TerrainKey { x: 640, y: Y1 },
+    TerrainKey { x: 760, y: Y0 },
+    TerrainKey { x: 880, y: Y1 },
+    TerrainKey { x: 1000, y: Y0 },
+    TerrainKey { x: 1080, y: Y0 },
+];
+const O26: &[Obstacle] = &[
+    Obstacle { x: 50, kind: Kind::Spike },
+    Obstacle { x: 90, kind: Kind::MovingSpike },
+    Obstacle { x: 160, kind: Kind::Block },
+    Obstacle { x: 200, kind: Kind::MovingSpike },
+    Obstacle { x: 250, kind: Kind::Spike },
+    Obstacle { x: 320, kind: Kind::MovingSpike },
+    Obstacle { x: 370, kind: Kind::Spike },
+    Obstacle { x: 440, kind: Kind::MovingSpike },
+    Obstacle { x: 480, kind: Kind::Block },
+    Obstacle { x: 540, kind: Kind::MovingSpike },
+    Obstacle { x: 580, kind: Kind::Spike },
+    Obstacle { x: 650, kind: Kind::MovingSpike },
+    Obstacle { x: 700, kind: Kind::Spike },
+    Obstacle { x: 780, kind: Kind::MovingSpike },
+    Obstacle { x: 820, kind: Kind::Block },
+    Obstacle { x: 880, kind: Kind::MovingSpike },
+    Obstacle { x: 940, kind: Kind::Spike },
+    Obstacle { x: 1000, kind: Kind::MovingSpike },
+    Obstacle { x: 1040, kind: Kind::Spike },
+];
+
 pub static LEVELS: [Level; LEVEL_COUNT] = [
     Level {
         difficulty: 1,
@@ -1237,5 +1328,21 @@ pub static LEVELS: [Level; LEVEL_COUNT] = [
         gravity_flips: 5,
         terrain: T24,
         obstacles: O24,
+    },
+    Level {
+        difficulty: 25,
+        length: 960,
+        mode: TerrainMode::Smooth,
+        gravity_flips: 0,
+        terrain: T25,
+        obstacles: O25,
+    },
+    Level {
+        difficulty: 26,
+        length: 1080,
+        mode: TerrainMode::Stepped,
+        gravity_flips: 0,
+        terrain: T26,
+        obstacles: O26,
     },
 ];

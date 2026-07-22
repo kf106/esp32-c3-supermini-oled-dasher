@@ -91,6 +91,36 @@ pub fn fill_spike_down(frame: &mut [u8; FRAME_LEN], base_x: i32, base_y: i32, w:
     }
 }
 
+/// Hollow ▲ — outline only (moving-spike hint).
+pub fn stroke_spike_up(frame: &mut [u8; FRAME_LEN], base_x: i32, base_y: i32, w: i32, h: i32) {
+    let cx = base_x + w / 2;
+    let apex_y = base_y - h + 1;
+    for row in 0..h {
+        let half = ((row + 1) * w) / (2 * h);
+        let y = apex_y + row;
+        set_pixel(frame, cx - half, y, true);
+        set_pixel(frame, cx + half, y, true);
+    }
+    for x in base_x..base_x + w {
+        set_pixel(frame, x, base_y, true);
+    }
+}
+
+/// Hollow ▼ — outline only (moving-spike hint).
+pub fn stroke_spike_down(frame: &mut [u8; FRAME_LEN], base_x: i32, base_y: i32, w: i32, h: i32) {
+    let cx = base_x + w / 2;
+    for row in 0..h {
+        let t = h - 1 - row;
+        let half = ((t + 1) * w) / (2 * h);
+        let y = base_y + row;
+        set_pixel(frame, cx - half, y, true);
+        set_pixel(frame, cx + half, y, true);
+    }
+    for x in base_x..base_x + w {
+        set_pixel(frame, x, base_y, true);
+    }
+}
+
 fn draw_digit(frame: &mut [u8; FRAME_LEN], x: i32, y: i32, d: u8) {
     let Some(rows) = font::digit_rows(d) else {
         return;

@@ -33,6 +33,8 @@ pub struct Game {
     y: i32,
     vy: i32,
     on_ground: bool,
+    /// Animation clock for moving hazards (advances while playing).
+    tick: u32,
     phase: Phase,
     attempts: u32,
 }
@@ -46,6 +48,7 @@ impl Game {
             y: 0,
             vy: 0,
             on_ground: true,
+            tick: 0,
             phase: Phase::Playing,
             attempts: 1,
         };
@@ -61,6 +64,7 @@ impl Game {
             y: 0,
             vy: 0,
             on_ground: true,
+            tick: 0,
             phase: Phase::Complete { timer: 0 },
             attempts: 1,
         }
@@ -167,6 +171,7 @@ impl Game {
     fn reset_run(&mut self) {
         self.scroll = 0;
         self.vy = 0;
+        self.tick = 0;
         self.on_ground = true;
         self.phase = Phase::Playing;
         let inv = self.inverted();
@@ -214,6 +219,7 @@ impl Game {
 
         // Scroll first so a jump on the frame a block arrives can still clear it.
         self.scroll += SCROLL;
+        self.tick = self.tick.wrapping_add(1);
 
         if self.scroll >= self.level().length {
             self.on_level_complete();
@@ -432,10 +438,10 @@ impl Game {
         let lvl = self.level();
         for obs in lvl.obstacles {
             match obs.kind {
-                Kind::Spike => {
-                    let mid = obs.x + SPIKE_W / 2;
+                Kind::Spike | Kind::MovingSpike => {
+                    let sx = obs.world_x(self.tick);
+                    let mid = sx + SPIKE_W / 2;
                     let surf = self.surface_at(mid);
-                    let sx = obs.x;
                     let (sy, sh) = if self.inverted_at(mid) {
                         (surf, SPIKE_H)
                     } else {
@@ -547,13 +553,14 @@ impl Game {
         }
 
         for obs in lvl.obstacles {
-            let sx = obs.x - self.scroll;
+            let ox = obs.world_x(self.tick);
+            let sx = ox - self.scroll;
             if sx < -10 || sx > WIDTH as i32 + 2 {
                 continue;
             }
-            let mid = obs.x
+            let mid = ox
                 + match obs.kind {
-                    Kind::Spike => SPIKE_W / 2,
+                    Kind::Spike | Kind::MovingSpike => SPIKE_W / 2,
                     Kind::Block => BLOCK_W / 2,
                 };
             let surf = self.surface_at(mid);
@@ -564,6 +571,13 @@ impl Game {
                         framebuf::fill_spike_down(frame, sx, surf, SPIKE_W, SPIKE_H);
                     } else {
                         framebuf::fill_spike_up(frame, sx, surf - 1, SPIKE_W, SPIKE_H);
+                    }
+                }
+                Kind::MovingSpike => {
+                    if inv {
+                        framebuf::stroke_spike_down(frame, sx, surf, SPIKE_W, SPIKE_H);
+                    } else {
+                        framebuf::stroke_spike_up(frame, sx, surf - 1, SPIKE_W, SPIKE_H);
                     }
                 }
                 Kind::Block => {
