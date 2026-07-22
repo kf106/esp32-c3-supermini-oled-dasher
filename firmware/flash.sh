@@ -10,7 +10,7 @@ unset CARGO_TARGET_DIR
 # Optional:
 #   PORT=/dev/ttyACM0 ./flash.sh
 #   MONITOR=1 ./flash.sh
-#   ./flash.sh 7   # seed progress to level 7 (patched into SAVE_PAGE in the image)
+#   ./flash.sh 7   # seed progress to level 7 (SAVE_PAGE slot 0)
 PORT="${PORT:-}"
 MONITOR="${MONITOR:-0}"
 
@@ -33,14 +33,9 @@ build_and_merge() {
   espflash save-image --chip esp32c3 --merge --ignore-app-descriptor "$BIN" "$IMG" >/dev/null
 }
 
-# Locate SAVE_PAGE in the merged ESP image (segment load addr + file offset).
-# Writes save_flash_offset.rs and prints the flash offset.
 sync_save_offset() {
   python3 - "$IMG" "$BIN" "$OFFSET_RS" <<'PY'
-import struct
-import subprocess
-import sys
-
+import struct, subprocess, sys, os
 img_path, elf_path, offset_rs = sys.argv[1], sys.argv[2], sys.argv[3]
 APP_BASE = 0x10000
 
@@ -53,9 +48,8 @@ def save_page_vaddr(elf_path: str) -> int:
     raise SystemExit("SAVE_PAGE symbol not found in ELF (nm)")
 
 def save_page_flash_offset(img: bytes, vaddr: int) -> int:
-    magic = img[APP_BASE]
-    if magic != 0xE9:
-        raise SystemExit(f"bad ESP image magic at 0x{APP_BASE:X}: 0x{magic:02x}")
+    if img[APP_BASE] != 0xE9:
+        raise SystemExit(f"bad ESP image magic at 0x{APP_BASE:X}")
     segments = img[APP_BASE + 1]
     pos = APP_BASE + 24
     for _ in range(segments):
@@ -64,10 +58,10 @@ def save_page_flash_offset(img: bytes, vaddr: int) -> int:
         if load_addr <= vaddr < load_addr + size:
             off = data_off + (vaddr - load_addr)
             if off % 4096 != 0:
-                raise SystemExit(f"SAVE_PAGE flash offset 0x{off:X} is not sector-aligned")
+                raise SystemExit(f"SAVE_PAGE offset 0x{off:X} not sector-aligned")
             return off
         pos = data_off + size
-    raise SystemExit(f"SAVE_PAGE vaddr 0x{vaddr:X} not found in ESP image segments")
+    raise SystemExit(f"SAVE_PAGE vaddr 0x{vaddr:X} not in ESP image segments")
 
 img = open(img_path, "rb").read()
 vaddr = save_page_vaddr(elf_path)
@@ -76,19 +70,17 @@ text = (
     "// Auto-updated by flash.sh from the linked ELF + merged image. Do not edit.\n"
     f"pub const SAVE_FLASH_OFFSET: u32 = 0x{off:X};\n"
 )
-old = open(offset_rs).read() if __import__("os").path.exists(offset_rs) else ""
+old = open(offset_rs).read() if os.path.exists(offset_rs) else ""
 if old != text:
     open(offset_rs, "w").write(text)
     print(f"updated {offset_rs}: SAVE_FLASH_OFFSET=0x{off:X}")
-    sys.exit(2)  # signal caller to rebuild
+    sys.exit(2)
 print(f"SAVE_FLASH_OFFSET=0x{off:X}")
 print(off)
 PY
 }
 
 build_and_merge
-
-# Keep firmware constant in sync with image layout (may need one rebuild).
 set +e
 sync_out=$(sync_save_offset)
 sync_rc=$?
@@ -112,10 +104,7 @@ fi
 SAVE_OFF=$(echo "$sync_out" | tail -n1)
 
 python3 - "$IMG" "$SAVE_OFF" "${SEED_LEVEL}" <<'PY'
-import hashlib
-import struct
-import sys
-
+import struct, sys
 path, save_off_s, seed = sys.argv[1], sys.argv[2], sys.argv[3]
 save_off = int(save_off_s, 0)
 APP_BASE = 0x10000
@@ -128,69 +117,54 @@ def cstr(text: str, n: int) -> bytes:
 with open(path, "rb") as f:
     data = bytearray(f.read())
 
-# Patch descriptor fields.
 desc = bytearray(256)
-struct.pack_into("<I", desc, 0, 0xABCD5432)      # magic_word
-struct.pack_into("<I", desc, 4, 0)               # secure_version
-desc[16:48] = cstr("0.1.0", 32)                  # version
-desc[48:80] = cstr("oled-dash", 32)              # project_name
-desc[80:96] = cstr("00:00:00", 16)               # build time
-desc[96:112] = cstr("1970-01-01", 16)            # build date
-desc[112:144] = cstr("esp-hal", 32)              # idf_ver
-struct.pack_into("<H", desc, 176, 0)             # min_efuse_blk_rev_full
-struct.pack_into("<H", desc, 178, 0xFFFF)        # max_efuse_blk_rev_full
-desc[180] = 0                                    # mmu_page_size(log2)
+struct.pack_into("<I", desc, 0, 0xABCD5432)
+struct.pack_into("<I", desc, 4, 0)
+desc[16:48] = cstr("0.1.0", 32)
+desc[48:80] = cstr("oled-dash", 32)
+desc[80:96] = cstr("00:00:00", 16)
+desc[96:112] = cstr("1970-01-01", 16)
+desc[112:144] = cstr("esp-hal", 32)
+struct.pack_into("<H", desc, 176, 0)
+struct.pack_into("<H", desc, 178, 0xFFFF)
+desc[180] = 0
 data[APP_DESC_OFFSET:APP_DESC_OFFSET + 256] = desc
 
-# Seed progress into SAVE_PAGE before checksum (inside the app image).
+# Clear the whole SAVE_PAGE to 0xFF, then seed slot 0 if requested.
+if len(data) >= save_off + 4096:
+    for i in range(4096):
+        data[save_off + i] = 0xFF
+
 if seed:
-    if len(data) < save_off + 16:
-        raise SystemExit(
-            f"merged image too small ({len(data)} bytes) to seed save at 0x{save_off:X}"
-        )
-    level = int(seed) - 1  # 1-based UI level -> 0-based save index
-    magic = 0x4853_4144  # "DASH"
+    level = int(seed) - 1
+    magic = 0x4853_4144
     version = 1
     cksum = magic ^ version ^ level ^ 0xA5A5_C3C3
     data[save_off : save_off + 16] = struct.pack("<IIII", magic, version, level, cksum)
     print(f"seeding progress: level {seed} (index {level}) @ 0x{save_off:X}")
 
-# Recompute ESP image checksum for app partition at 0x10000.
+# Runtime save appends into SAVE_PAGE (inside the app image). That would break a
+# trailing SHA-256, so disable hash_appended — bootloader then skips the check.
+data[APP_BASE + 23] = 0
+
 base = APP_BASE
 segment_count = data[base + 1]
-append_digest = data[base + 23]
 pos = base + 24
 checksum = 0xEF
-
 for _ in range(segment_count):
     seg_len = struct.unpack_from("<I", data, pos + 4)[0]
     pos += 8
     for b in data[pos:pos + seg_len]:
         checksum ^= b
     pos += seg_len
-
 pad = (15 - ((pos - base) % 16)) % 16
 pos += pad
 data[pos] = checksum
-end = pos + 1
 
-# Recompute optional SHA-256 digest if present.
-if append_digest:
-    digest = hashlib.sha256(data[base:end]).digest()
-    data[end:end + 32] = digest
-
-with open(path, "wb") as f:
-    f.write(data)
+open(path, "wb").write(data)
 PY
 
 ARGS=(write-bin --chip esp32c3 0x0 "$IMG")
-
-if [[ -n "$PORT" ]]; then
-  ARGS+=(--port "$PORT")
-fi
-
-if [[ "$MONITOR" == "1" ]]; then
-  ARGS+=(--monitor)
-fi
-
+if [[ -n "$PORT" ]]; then ARGS+=(--port "$PORT"); fi
+if [[ "$MONITOR" == "1" ]]; then ARGS+=(--monitor); fi
 exec espflash "${ARGS[@]}"

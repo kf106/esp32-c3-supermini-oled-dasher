@@ -23,7 +23,7 @@ enum Phase {
     Playing,
     Dead { timer: u8 },
     Won { timer: u8 },
-    /// Finished level 16 — show complete splash until BOOT.
+    /// Finished all levels — complete splash; BOOT tap ignored (wipe via splash hold).
     Complete { timer: u8 },
 }
 
@@ -51,6 +51,30 @@ impl Game {
         };
         g.reset_run();
         g
+    }
+
+    /// Boot into the all-clear splash (saved progress is [`save::ALL_CLEAR`]).
+    pub fn all_clear() -> Self {
+        Self {
+            level_index: (LEVEL_COUNT - 1) as u8,
+            scroll: 0,
+            y: 0,
+            vy: 0,
+            on_ground: true,
+            phase: Phase::Complete { timer: 0 },
+            attempts: 1,
+        }
+    }
+
+    pub fn is_complete(&self) -> bool {
+        matches!(self.phase, Phase::Complete { .. })
+    }
+
+    /// After wipe from the complete screen — back to level 1.
+    pub fn restart_from_wipe(&mut self) {
+        self.level_index = 0;
+        self.attempts = 1;
+        self.reset_run();
     }
 
     fn level(&self) -> &'static Level {
@@ -124,11 +148,10 @@ impl Game {
             Phase::Complete { timer } => {
                 if timer > 0 {
                     self.phase = Phase::Complete { timer: timer - 1 };
-                } else if jump_pressed {
-                    // Replay the final level.
-                    self.attempts = 1;
-                    self.reset_run();
                 }
+                // Stay on the complete splash; BOOT tap does nothing.
+                // Reset is via power-cycle splash hold (wipe), same as usual.
+                let _ = jump_pressed;
                 return false;
             }
             Phase::Playing => {}
@@ -168,12 +191,12 @@ impl Game {
     }
 
     fn on_level_complete(&mut self) {
-        // Persist the level you'll play next (survives unplug on the win screen).
+        // RAM only — main defers flash flush (immediate write hangs this board).
         if (self.level_index as usize) + 1 < LEVEL_COUNT {
-            save::save_level(self.level_index + 1);
+            save::set_level_ram(self.level_index + 1);
             self.phase = Phase::Won { timer: 70 };
         } else {
-            save::save_level(self.level_index);
+            save::set_all_clear_ram();
             self.phase = Phase::Complete { timer: 90 };
         }
     }

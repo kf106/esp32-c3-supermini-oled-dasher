@@ -30,6 +30,8 @@ use ssd1306::{Display, FRAME_LEN};
 
 const TICK_MS: u32 = 33;
 const SPLASH_POLL_MS: u32 = 20;
+/// Frames to wait after splash before ROM save read/write (flash I/O near boot hangs).
+const FLASH_SETTLE_FRAMES: u32 = 60;
 
 const ESP_APP_DESC_MAGIC_WORD: u32 = 0xABCD5432;
 
@@ -135,11 +137,16 @@ fn main() -> ! {
         delay.delay_millis(400);
     }
 
-    let saved = if wiped { 0 } else { save::load_level() };
-    let mut game = Game::new(saved);
-    // Persist wipe after the game is visibly running (immediate flash write
-    // after splash was unreliable on this board).
-    let mut persist_in = if wiped { 60u32 } else { 0 };
+    // Mmap read of SAVE_PAGE — no ROM SPI (ROM reads hang this board).
+    let mut game = if wiped {
+        Game::new(0)
+    } else if save::is_all_clear() {
+        Game::all_clear()
+    } else {
+        Game::new(save::load_level())
+    };
+    let mut persist_in = if wiped { FLASH_SETTLE_FRAMES } else { 0 };
+    let mut hold_ms = 0u32;
 
     game.draw(&mut frame);
     display.show(&frame);
@@ -152,9 +159,32 @@ fn main() -> ! {
             persist_in -= 1;
         }
 
-        let jump = boot.pressed_edge();
-        if game.update(jump) {
-            led::flash_three(&mut led, &delay);
+        if game.is_complete() {
+            // Hold BOOT 2s on the complete screen to wipe → level 1.
+            if boot.is_down() {
+                hold_ms = hold_ms.saturating_add(TICK_MS);
+                if hold_ms >= RESET_HOLD_MS {
+                    save::clear_progress_ram();
+                    splash::draw_erased(&mut frame);
+                    display.show(&frame);
+                    delay.delay_millis(400);
+                    game.restart_from_wipe();
+                    persist_in = FLASH_SETTLE_FRAMES;
+                    hold_ms = 0;
+                    boot.sync();
+                }
+            } else {
+                hold_ms = 0;
+            }
+            let _ = boot.pressed_edge();
+            let _ = game.update(false);
+        } else {
+            hold_ms = 0;
+            let jump = boot.pressed_edge();
+            if game.update(jump) {
+                led::flash_three(&mut led, &delay);
+                persist_in = FLASH_SETTLE_FRAMES;
+            }
         }
         game.draw(&mut frame);
         display.show(&frame);
