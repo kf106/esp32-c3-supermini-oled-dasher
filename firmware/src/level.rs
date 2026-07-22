@@ -639,69 +639,65 @@ const O15: &[Obstacle] = &[
 ];
 
 // --- Level 16: finale — flat → steps → hills → mixed jumps ---
-// const T16: &[TerrainKey] = &[
-//     // flat sprint
-//     TerrainKey { x: 0, y: Y0 },
-//     TerrainKey { x: 200, y: Y0 },
-//     // steps
-//     TerrainKey { x: 201, y: Y1 },
-//     TerrainKey { x: 280, y: Y1 },
-//     TerrainKey { x: 281, y: Y2 },
-//     TerrainKey { x: 360, y: Y2 },
-//     TerrainKey { x: 361, y: Y1 },
-//     TerrainKey { x: 440, y: Y1 },
-//     TerrainKey { x: 441, y: Y0 },
-//     // hills
-//     TerrainKey { x: 520, y: 28 },
-//     TerrainKey { x: 600, y: 22 },
-//     TerrainKey { x: 680, y: 32 },
-//     TerrainKey { x: 760, y: 24 },
-//     // mixed jumps
-//     TerrainKey { x: 820, y: Y0 },
-//     TerrainKey { x: 822, y: Y1 },
-//     TerrainKey { x: 900, y: Y1 },
-//     TerrainKey { x: 902, y: Y2 },
-//     TerrainKey { x: 980, y: Y2 },
-//     TerrainKey { x: 1040, y: 28 },
-//     TerrainKey { x: 1100, y: Y0 },
-//     TerrainKey { x: 1102, y: Y1 },
-//     TerrainKey { x: 1180, y: Y1 },
-//     TerrainKey { x: 1240, y: Y0 },
-// ];
-// const O16: &[Obstacle] = &[
-//     Obstacle { x: 50, kind: Kind::Spike },
-//     Obstacle { x: 90, kind: Kind::Spike },
-//     Obstacle { x: 130, kind: Kind::Block },
-//     Obstacle { x: 170, kind: Kind::Spike },
-//     Obstacle { x: 230, kind: Kind::Spike },
-//     Obstacle { x: 260, kind: Kind::Spike },
-//     Obstacle { x: 300, kind: Kind::Block },
-//     Obstacle { x: 340, kind: Kind::Spike },
-//     Obstacle { x: 390, kind: Kind::Spike },
-//     Obstacle { x: 420, kind: Kind::Block },
-//     Obstacle { x: 480, kind: Kind::Spike },
-//     Obstacle { x: 540, kind: Kind::Spike },
-//     Obstacle { x: 570, kind: Kind::Spike },
-//     Obstacle { x: 620, kind: Kind::Block },
-//     Obstacle { x: 660, kind: Kind::Spike },
-//     Obstacle { x: 700, kind: Kind::Spike },
-//     Obstacle { x: 740, kind: Kind::Spike },
-//     Obstacle { x: 790, kind: Kind::Block },
-//     Obstacle { x: 840, kind: Kind::Spike },
-//     Obstacle { x: 870, kind: Kind::Spike },
-//     Obstacle { x: 920, kind: Kind::Block },
-//     Obstacle { x: 960, kind: Kind::Spike },
-//     Obstacle { x: 1000, kind: Kind::Spike },
-//     Obstacle { x: 1060, kind: Kind::Block },
-//     Obstacle { x: 1120, kind: Kind::Spike },
-//     Obstacle { x: 1150, kind: Kind::Spike },
-//     Obstacle { x: 1190, kind: Kind::Spike },
-//     Obstacle { x: 1220, kind: Kind::Block },
-// ];
-
-// --- Level 16 (debug): flat sprint, one block — for COMPLETE! splash ---
-const T16: &[TerrainKey] = &[TerrainKey { x: 0, y: Y0 }, TerrainKey { x: 280, y: Y0 }];
-const O16: &[Obstacle] = &[Obstacle { x: 100, kind: Kind::Block }];
+const T16: &[TerrainKey] = &[
+    // flat sprint
+    TerrainKey { x: 0, y: Y0 },
+    TerrainKey { x: 200, y: Y0 },
+    // steps
+    TerrainKey { x: 201, y: Y1 },
+    TerrainKey { x: 280, y: Y1 },
+    TerrainKey { x: 281, y: Y2 },
+    TerrainKey { x: 360, y: Y2 },
+    TerrainKey { x: 361, y: Y1 },
+    TerrainKey { x: 440, y: Y1 },
+    TerrainKey { x: 441, y: Y0 },
+    // hills
+    TerrainKey { x: 520, y: 28 },
+    TerrainKey { x: 600, y: 22 },
+    TerrainKey { x: 680, y: 32 },
+    TerrainKey { x: 760, y: 24 },
+    // mixed jumps
+    TerrainKey { x: 820, y: Y0 },
+    TerrainKey { x: 822, y: Y1 },
+    TerrainKey { x: 900, y: Y1 },
+    TerrainKey { x: 902, y: Y2 },
+    TerrainKey { x: 980, y: Y2 },
+    TerrainKey { x: 1040, y: 28 },
+    TerrainKey { x: 1100, y: Y0 },
+    TerrainKey { x: 1102, y: Y1 },
+    TerrainKey { x: 1180, y: Y1 },
+    TerrainKey { x: 1240, y: Y0 },
+];
+const O16: &[Obstacle] = &[
+    Obstacle { x: 50, kind: Kind::Spike },
+    Obstacle { x: 90, kind: Kind::Spike },
+    Obstacle { x: 130, kind: Kind::Block },
+    Obstacle { x: 170, kind: Kind::Spike },
+    Obstacle { x: 230, kind: Kind::Spike },
+    Obstacle { x: 260, kind: Kind::Spike },
+    Obstacle { x: 300, kind: Kind::Block },
+    Obstacle { x: 340, kind: Kind::Spike },
+    Obstacle { x: 390, kind: Kind::Spike },
+    Obstacle { x: 420, kind: Kind::Block },
+    Obstacle { x: 480, kind: Kind::Spike },
+    Obstacle { x: 540, kind: Kind::Spike },
+    Obstacle { x: 570, kind: Kind::Spike },
+    Obstacle { x: 620, kind: Kind::Block },
+    Obstacle { x: 660, kind: Kind::Spike },
+    Obstacle { x: 700, kind: Kind::Spike },
+    Obstacle { x: 740, kind: Kind::Spike },
+    Obstacle { x: 790, kind: Kind::Block },
+    Obstacle { x: 840, kind: Kind::Spike },
+    Obstacle { x: 870, kind: Kind::Spike },
+    Obstacle { x: 920, kind: Kind::Block },
+    Obstacle { x: 960, kind: Kind::Spike },
+    Obstacle { x: 1000, kind: Kind::Spike },
+    Obstacle { x: 1060, kind: Kind::Block },
+    Obstacle { x: 1120, kind: Kind::Spike },
+    Obstacle { x: 1150, kind: Kind::Spike },
+    Obstacle { x: 1190, kind: Kind::Spike },
+    Obstacle { x: 1220, kind: Kind::Block },
+];
 
 pub static LEVELS: [Level; LEVEL_COUNT] = [
     Level {
@@ -811,8 +807,8 @@ pub static LEVELS: [Level; LEVEL_COUNT] = [
     },
     Level {
         difficulty: 16,
-        length: 280,
-        mode: TerrainMode::Stepped,
+        length: 1240,
+        mode: TerrainMode::Smooth,
         terrain: T16,
         obstacles: O16,
     },
