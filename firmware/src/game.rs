@@ -85,12 +85,50 @@ impl Game {
         self.scroll + PLAYER_SX
     }
 
-    /// Dirt ground under the cube, or a block top if we're on / jumping onto it.
+    /// Gravity / surface inverted after an odd number of flip lines.
+    fn inverted_at(&self, world_x: i32) -> bool {
+        self.level().inverted_at(world_x)
+    }
+
+    fn inverted(&self) -> bool {
+        self.inverted_at(self.player_world_x() + CUBE / 2)
+    }
+
+    /// Walkable surface Y at world x (floor top normally; ceiling when inverted).
+    fn surface_at(&self, world_x: i32) -> i32 {
+        let g = ground_at(self.level(), world_x);
+        if self.inverted_at(world_x) {
+            (HEIGHT as i32 - 1) - g
+        } else {
+            g
+        }
+    }
+
+    /// Cube Y when resting on `surface` (feet on floor, or top on ceiling).
+    fn rest_y(surface: i32, inverted: bool) -> i32 {
+        if inverted {
+            surface
+        } else {
+            surface - CUBE
+        }
+    }
+
+    /// Contact edge toward the active surface (feet normally, top when inverted).
+    fn contact_y(&self) -> i32 {
+        if self.inverted() {
+            self.y
+        } else {
+            self.y + CUBE
+        }
+    }
+
+    /// Dirt / ceiling under the cube, or a block platform if we're on / landing on it.
     fn floor_at_player(&self) -> i32 {
         let lvl = self.level();
         let px = self.player_world_x();
-        let mut floor = ground_at(lvl, px + CUBE / 2);
-        let feet = self.y + CUBE;
+        let inv = self.inverted();
+        let mut floor = self.surface_at(px + CUBE / 2);
+        let contact = self.contact_y();
 
         for obs in lvl.obstacles {
             if obs.kind != Kind::Block {
@@ -100,12 +138,26 @@ impl Game {
             if px + CUBE <= ox || px >= ox + BLOCK_W {
                 continue;
             }
-            let top = ground_at(lvl, ox + BLOCK_W / 2) - BLOCK_H;
-            // Airborne: block is a platform (jump onto / over).
-            // Grounded: only if already on top — walking into the face stays lethal.
-            if !self.on_ground || feet <= top + 3 {
-                if top < floor {
-                    floor = top;
+            let mid = ox + BLOCK_W / 2;
+            let surf = self.surface_at(mid);
+            let platform = if self.inverted_at(mid) {
+                surf + BLOCK_H
+            } else {
+                surf - BLOCK_H
+            };
+            // Airborne: block is a platform. Grounded: only if already on top.
+            let on_or_landing = if inv {
+                !self.on_ground || contact + 3 >= platform
+            } else {
+                !self.on_ground || contact <= platform + 3
+            };
+            if on_or_landing {
+                if inv {
+                    if platform > floor {
+                        floor = platform;
+                    }
+                } else if platform < floor {
+                    floor = platform;
                 }
             }
         }
@@ -117,7 +169,8 @@ impl Game {
         self.vy = 0;
         self.on_ground = true;
         self.phase = Phase::Playing;
-        self.y = self.floor_at_player() - CUBE;
+        let inv = self.inverted();
+        self.y = Self::rest_y(self.floor_at_player(), inv);
     }
 
     fn progress_pct(&self) -> u32 {
@@ -157,6 +210,8 @@ impl Game {
             Phase::Playing => {}
         }
 
+        let prev_inv = self.inverted();
+
         // Scroll first so a jump on the frame a block arrives can still clear it.
         self.scroll += SCROLL;
 
@@ -165,17 +220,36 @@ impl Game {
             return true;
         }
 
+        // Crossing a flip line: drop grounded state so we don't stick in the old surface.
+        if self.inverted() != prev_inv {
+            let was_grounded = self.on_ground;
+            self.on_ground = false;
+            if was_grounded {
+                let inv = self.inverted();
+                self.y = Self::rest_y(self.floor_at_player(), inv);
+                self.vy = 0;
+                self.on_ground = true;
+            }
+        }
+
         if jump_pressed && self.on_ground {
-            self.vy = JUMP_VEL;
+            self.vy = if self.inverted() { -JUMP_VEL } else { JUMP_VEL };
             self.on_ground = false;
         }
 
         // Only integrate vertical motion while airborne. Grounded frames would
         // otherwise sink 1px into the dirt every tick.
         if !self.on_ground {
-            self.vy += GRAVITY;
-            if self.vy > 4 {
-                self.vy = 4;
+            if self.inverted() {
+                self.vy -= GRAVITY;
+                if self.vy < -4 {
+                    self.vy = -4;
+                }
+            } else {
+                self.vy += GRAVITY;
+                if self.vy > 4 {
+                    self.vy = 4;
+                }
             }
             self.y += self.vy;
         } else {
@@ -211,48 +285,86 @@ impl Game {
 
     fn resolve_terrain(&mut self) {
         let g = self.floor_at_player();
-        let feet = self.y + CUBE;
+        let inv = self.inverted();
+        let contact = self.contact_y();
 
         if !self.on_ground {
-            // Jumping into a block face: catch onto the top instead of dying.
-            if feet > g && self.player_over_block_platform(g) {
-                self.y = g - CUBE;
-                self.vy = 0;
-                self.on_ground = true;
-                return;
-            }
-            if self.vy >= 0 && feet >= g {
-                self.y = g - CUBE;
-                self.vy = 0;
-                self.on_ground = true;
+            if inv {
+                // Jumping into a hanging block underside: catch onto it.
+                if contact < g && self.player_over_block_platform(g) {
+                    self.y = Self::rest_y(g, true);
+                    self.vy = 0;
+                    self.on_ground = true;
+                    return;
+                }
+                if self.vy <= 0 && contact <= g {
+                    self.y = Self::rest_y(g, true);
+                    self.vy = 0;
+                    self.on_ground = true;
+                }
+            } else {
+                // Jumping into a block face: catch onto the top instead of dying.
+                if contact > g && self.player_over_block_platform(g) {
+                    self.y = Self::rest_y(g, false);
+                    self.vy = 0;
+                    self.on_ground = true;
+                    return;
+                }
+                if self.vy >= 0 && contact >= g {
+                    self.y = Self::rest_y(g, false);
+                    self.vy = 0;
+                    self.on_ground = true;
+                }
             }
             return;
         }
 
-        let rise = feet - g;
-        if self.level().mode == TerrainMode::Stepped {
-            if g > feet {
-                self.on_ground = false;
-            } else if rise <= 0 {
-                self.y = g - CUBE;
+        if inv {
+            let sink = g - contact; // positive if surface moved away into playfield
+            if self.level().mode == TerrainMode::Stepped {
+                if g < contact {
+                    self.on_ground = false;
+                } else if sink >= 0 {
+                    self.y = Self::rest_y(g, true);
+                }
+            } else {
+                let s_prev = self.surface_at(
+                    self.scroll.saturating_sub(3) + PLAYER_SX + CUBE / 2,
+                );
+                // Positive when ceiling rises toward gravity (smaller y).
+                let slope_up = s_prev - g;
+                if slope_up <= 2 && sink <= 3 {
+                    self.y = Self::rest_y(g, true);
+                } else if g < contact {
+                    self.on_ground = false;
+                }
             }
-            // rise > 0: ledge face — buried_in_terrain handles death
         } else {
-            // Follow gentle slopes; refuse steep faces (jump pairs on 8/13/16).
-            let g_prev = ground_at(
-                self.level(),
-                self.scroll.saturating_sub(3) + PLAYER_SX + CUBE / 2,
-            );
-            let slope_up = g_prev - g;
-            if slope_up <= 2 && rise <= 3 {
-                self.y = g - CUBE;
-            } else if g > feet {
-                self.on_ground = false;
+            let rise = contact - g;
+            if self.level().mode == TerrainMode::Stepped {
+                if g > contact {
+                    self.on_ground = false;
+                } else if rise <= 0 {
+                    self.y = Self::rest_y(g, false);
+                }
+                // rise > 0: ledge face — buried_in_terrain handles death
+            } else {
+                // Follow gentle slopes; refuse steep faces (jump pairs on 8/13/16).
+                let g_prev = ground_at(
+                    self.level(),
+                    self.scroll.saturating_sub(3) + PLAYER_SX + CUBE / 2,
+                );
+                let slope_up = g_prev - g;
+                if slope_up <= 2 && rise <= 3 {
+                    self.y = Self::rest_y(g, false);
+                } else if g > contact {
+                    self.on_ground = false;
+                }
             }
         }
     }
 
-    /// True when `platform_y` is a block top under the player (not plain dirt).
+    /// True when `platform_y` is a block top/underside under the player (not plain dirt).
     fn player_over_block_platform(&self, platform_y: i32) -> bool {
         let lvl = self.level();
         let px = self.player_world_x();
@@ -264,7 +376,13 @@ impl Game {
             if px + CUBE <= ox || px >= ox + BLOCK_W {
                 continue;
             }
-            let top = ground_at(lvl, ox + BLOCK_W / 2) - BLOCK_H;
+            let mid = ox + BLOCK_W / 2;
+            let surf = self.surface_at(mid);
+            let top = if self.inverted_at(mid) {
+                surf + BLOCK_H
+            } else {
+                surf - BLOCK_H
+            };
             if top == platform_y {
                 return true;
             }
@@ -273,47 +391,79 @@ impl Game {
     }
 
     fn buried_in_terrain(&self) -> bool {
-        // Only dirt ledges count — block platforms are handled via floor_at_player.
-        let dirt = ground_at(self.level(), self.player_world_x() + CUBE / 2);
-        let feet = self.y + CUBE;
-        let rise = feet - dirt;
-        if self.on_ground {
-            // Standing on a block: feet well above dirt — not buried.
-            if feet + 2 < dirt {
-                return false;
+        let inv = self.inverted();
+        let dirt = self.surface_at(self.player_world_x() + CUBE / 2);
+        let contact = self.contact_y();
+
+        if inv {
+            let sink = dirt - contact;
+            if self.on_ground {
+                // Standing on a hanging block: contact well below ceiling dirt.
+                if contact > dirt + 2 {
+                    return false;
+                }
+                return match self.level().mode {
+                    TerrainMode::Stepped => sink < 0,
+                    TerrainMode::Smooth => sink < -3,
+                };
             }
-            return match self.level().mode {
-                TerrainMode::Stepped => rise > 0,
-                TerrainMode::Smooth => rise > 3,
-            };
+            // Airborne: buried if deep into ceiling solid.
+            sink < -4 && self.y < dirt
+        } else {
+            let rise = contact - dirt;
+            if self.on_ground {
+                // Standing on a block: feet well above dirt — not buried.
+                if contact + 2 < dirt {
+                    return false;
+                }
+                return match self.level().mode {
+                    TerrainMode::Stepped => rise > 0,
+                    TerrainMode::Smooth => rise > 3,
+                };
+            }
+            rise > 4 && self.y < dirt
         }
-        rise > 4 && self.y < dirt
     }
 
     fn hits_hazard(&self) -> bool {
         let px = self.player_world_x();
         let py = self.y;
-        let feet = py + CUBE;
+        let contact = self.contact_y();
         let lvl = self.level();
         for obs in lvl.obstacles {
             match obs.kind {
                 Kind::Spike => {
-                    let floor = ground_at(lvl, obs.x + SPIKE_W / 2);
+                    let mid = obs.x + SPIKE_W / 2;
+                    let surf = self.surface_at(mid);
                     let sx = obs.x;
-                    let sy = floor - SPIKE_H;
-                    if aabb(px, py, CUBE, CUBE, sx + 1, sy + 1, SPIKE_W - 2, SPIKE_H - 1) {
+                    let (sy, sh) = if self.inverted_at(mid) {
+                        (surf, SPIKE_H)
+                    } else {
+                        (surf - SPIKE_H, SPIKE_H)
+                    };
+                    if aabb(px, py, CUBE, CUBE, sx + 1, sy + 1, SPIKE_W - 2, sh - 1) {
                         return true;
                     }
                 }
                 Kind::Block => {
-                    let floor = ground_at(lvl, obs.x + BLOCK_W / 2);
+                    let mid = obs.x + BLOCK_W / 2;
+                    let surf = self.surface_at(mid);
                     let bx = obs.x;
-                    let top = floor - BLOCK_H;
-                    if !aabb(px, py, CUBE, CUBE, bx, top, BLOCK_W, BLOCK_H) {
+                    let (top, h) = if self.inverted_at(mid) {
+                        (surf, BLOCK_H)
+                    } else {
+                        (surf - BLOCK_H, BLOCK_H)
+                    };
+                    if !aabb(px, py, CUBE, CUBE, bx, top, BLOCK_W, h) {
                         continue;
                     }
-                    // Top is a platform — only the face / body is lethal.
-                    if feet <= top + 3 {
+                    // Walkable face is a platform — only the body / far face is lethal.
+                    if self.inverted_at(mid) {
+                        let platform = surf + BLOCK_H;
+                        if contact + 3 >= platform {
+                            continue;
+                        }
+                    } else if contact <= top + 3 {
                         continue;
                     }
                     return true;
@@ -333,38 +483,67 @@ impl Game {
         let lvl = self.level();
         let fill = self.level_index as usize % 6;
 
-        // Variable-height ground. Fill style cycles every 6 levels:
-        // 0 diagonal stripes, 1 opposite diagonal, 2 solid white,
-        // 3 white dots on black, 4 solid black, 5 black dots on white.
-        let mut g_prev = ground_at(lvl, self.scroll);
+        // Variable-height ground / ceiling fill. Style cycles every 6 levels.
+        let mut s_prev = self.surface_at(self.scroll);
+        let mut inv_prev = self.inverted_at(self.scroll);
         for sx in 0..WIDTH as i32 {
-            let g = ground_at(lvl, self.scroll + sx);
-            if g < HEIGHT as i32 {
+            let wx = self.scroll + sx;
+            let inv = self.inverted_at(wx);
+            let s = self.surface_at(wx);
+            let near_flip = lvl.near_flip(wx);
+
+            if s >= 0 && s < HEIGHT as i32 {
                 // Contour line so black-fill levels still show the terrain edge.
-                framebuf::set_pixel(frame, sx, g, true);
+                framebuf::set_pixel(frame, sx, s, true);
             }
-            // Vertical face at 8px (etc.) height changes — needed on black fill.
-            if sx > 0 && g != g_prev {
-                let y0 = g.min(g_prev);
-                let y1 = g.max(g_prev);
-                for y in y0..=y1 {
-                    framebuf::set_pixel(frame, sx, y, true);
+            // Vertical faces for real ledges only — never at a gravity seam
+            // (including terrain steps right next to the flip, which read as a
+            // solid bar into the new ceiling outline).
+            if sx > 0 && s != s_prev && inv == inv_prev && !near_flip {
+                let dy = (s - s_prev).abs();
+                if dy <= level::STEP * 2 {
+                    let y0 = s.min(s_prev);
+                    let y1 = s.max(s_prev);
+                    for y in y0..=y1 {
+                        framebuf::set_pixel(frame, sx, y, true);
+                    }
                 }
             }
-            for y in (g + 1)..HEIGHT as i32 {
-                let on = match fill {
-                    0 => ((sx + y + self.scroll) & 2) == 0,
-                    1 => ((sx - y + self.scroll) & 2) == 0,
-                    2 => true,
-                    3 => (sx.wrapping_add(self.scroll) & 1) == 0 && (y & 1) == 0,
-                    4 => false,
-                    _ => !((sx.wrapping_add(self.scroll) & 1) == 0 && (y & 1) == 0),
-                };
-                if on {
-                    framebuf::set_pixel(frame, sx, y, true);
+            // No fill on the gravity seam — ceiling fill's leading column would
+            // otherwise look like a solid vertical bar.
+            if !near_flip && !(sx > 0 && inv != inv_prev) {
+                if inv {
+                    for y in 0..s {
+                        let on = match fill {
+                            0 => ((sx + y + self.scroll) & 2) == 0,
+                            1 => ((sx - y + self.scroll) & 2) == 0,
+                            2 => true,
+                            3 => (sx.wrapping_add(self.scroll) & 1) == 0 && (y & 1) == 0,
+                            4 => false,
+                            _ => !((sx.wrapping_add(self.scroll) & 1) == 0 && (y & 1) == 0),
+                        };
+                        if on {
+                            framebuf::set_pixel(frame, sx, y, true);
+                        }
+                    }
+                } else {
+                    for y in (s + 1)..(HEIGHT as i32) {
+                        let on = match fill {
+                            0 => ((sx + y + self.scroll) & 2) == 0,
+                            1 => ((sx - y + self.scroll) & 2) == 0,
+                            2 => true,
+                            3 => (sx.wrapping_add(self.scroll) & 1) == 0 && (y & 1) == 0,
+                            4 => false,
+                            _ => !((sx.wrapping_add(self.scroll) & 1) == 0 && (y & 1) == 0),
+                        };
+                        if on {
+                            framebuf::set_pixel(frame, sx, y, true);
+                        }
+                    }
                 }
             }
-            g_prev = g;
+            s_prev = s;
+            inv_prev = inv;
         }
 
         for obs in lvl.obstacles {
@@ -372,14 +551,27 @@ impl Game {
             if sx < -10 || sx > WIDTH as i32 + 2 {
                 continue;
             }
+            let mid = obs.x
+                + match obs.kind {
+                    Kind::Spike => SPIKE_W / 2,
+                    Kind::Block => BLOCK_W / 2,
+                };
+            let surf = self.surface_at(mid);
+            let inv = self.inverted_at(mid);
             match obs.kind {
                 Kind::Spike => {
-                    let floor = ground_at(lvl, obs.x + SPIKE_W / 2);
-                    framebuf::fill_spike_up(frame, sx, floor - 1, SPIKE_W, SPIKE_H);
+                    if inv {
+                        framebuf::fill_spike_down(frame, sx, surf, SPIKE_W, SPIKE_H);
+                    } else {
+                        framebuf::fill_spike_up(frame, sx, surf - 1, SPIKE_W, SPIKE_H);
+                    }
                 }
                 Kind::Block => {
-                    let floor = ground_at(lvl, obs.x + BLOCK_W / 2);
-                    framebuf::fill_rect(frame, sx, floor - BLOCK_H, BLOCK_W, BLOCK_H);
+                    if inv {
+                        framebuf::fill_rect(frame, sx, surf, BLOCK_W, BLOCK_H);
+                    } else {
+                        framebuf::fill_rect(frame, sx, surf - BLOCK_H, BLOCK_W, BLOCK_H);
+                    }
                 }
             }
         }
@@ -398,7 +590,26 @@ impl Game {
             }
         }
 
-        // HUD: difficulty (1-16) left, progress % right
+        // Gravity flip markers: full-height dotted line (1 on, 3 off), XOR so it
+        // stays visible on any fill. Solid seam bars are avoided by skipping fill
+        // / vertical faces near the flip — not by omitting this marker.
+        if lvl.gravity_flips > 0 {
+            for i in 0..lvl.gravity_flips {
+                let sx = lvl.flip_at(i) - self.scroll;
+                if sx < 0 || sx >= WIDTH as i32 {
+                    continue;
+                }
+                let mut y = 0;
+                while y < HEIGHT as i32 {
+                    if y % 4 == 0 {
+                        framebuf::xor_pixel(frame, sx, y);
+                    }
+                    y += 1;
+                }
+            }
+        }
+
+        // HUD: level number left, progress % right
         framebuf::draw_score(frame, 11, 0, u32::from(lvl.difficulty));
         framebuf::draw_score(frame, WIDTH as i32 - 1, 0, self.progress_pct());
     }

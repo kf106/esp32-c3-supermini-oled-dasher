@@ -1,6 +1,6 @@
 //! MONO_VLSB framebuffer helpers (72×40).
 
-use crate::font::{self, ADVANCE, DIGIT_W};
+use crate::font::{self, ADVANCE, DIGIT_H, DIGIT_W};
 use crate::ssd1306::{FRAME_LEN, WIDTH};
 
 pub fn clear(frame: &mut [u8; FRAME_LEN]) {
@@ -23,10 +23,30 @@ pub fn set_pixel(frame: &mut [u8; FRAME_LEN], x: i32, y: i32, on: bool) {
     }
 }
 
+pub fn xor_pixel(frame: &mut [u8; FRAME_LEN], x: i32, y: i32) {
+    if x < 0 || y < 0 || x >= WIDTH as i32 || y >= crate::ssd1306::HEIGHT as i32 {
+        return;
+    }
+    let x = x as usize;
+    let y = y as usize;
+    let page = y / 8;
+    let bit = y % 8;
+    let idx = page * WIDTH + x;
+    frame[idx] ^= 1 << bit;
+}
+
 pub fn fill_rect(frame: &mut [u8; FRAME_LEN], x: i32, y: i32, w: i32, h: i32) {
     for py in y..y + h {
         for px in x..x + w {
             set_pixel(frame, px, py, true);
+        }
+    }
+}
+
+pub fn clear_rect(frame: &mut [u8; FRAME_LEN], x: i32, y: i32, w: i32, h: i32) {
+    for py in y..y + h {
+        for px in x..x + w {
+            set_pixel(frame, px, py, false);
         }
     }
 }
@@ -58,6 +78,19 @@ pub fn fill_spike_up(frame: &mut [u8; FRAME_LEN], base_x: i32, base_y: i32, w: i
     }
 }
 
+pub fn fill_spike_down(frame: &mut [u8; FRAME_LEN], base_x: i32, base_y: i32, w: i32, h: i32) {
+    // Base at base_y (ceiling), apex at base_y + h - 1
+    for row in 0..h {
+        let t = h - 1 - row; // 0 at apex
+        let half = ((t + 1) * w) / (2 * h);
+        let cx = base_x + w / 2;
+        let y = base_y + row;
+        for x in (cx - half)..=(cx + half) {
+            set_pixel(frame, x, y, true);
+        }
+    }
+}
+
 fn draw_digit(frame: &mut [u8; FRAME_LEN], x: i32, y: i32, d: u8) {
     let Some(rows) = font::digit_rows(d) else {
         return;
@@ -72,6 +105,17 @@ fn draw_digit(frame: &mut [u8; FRAME_LEN], x: i32, y: i32, d: u8) {
 }
 
 pub fn draw_score(frame: &mut [u8; FRAME_LEN], mut right_x: i32, y: i32, mut score: u32) {
+    let mut digits = 1u32;
+    let mut n = score;
+    while n >= 10 {
+        n /= 10;
+        digits += 1;
+    }
+    let w = (digits as i32 - 1) * ADVANCE as i32 + DIGIT_W as i32;
+    let left = right_x - (DIGIT_W as i32 - 1) - (digits as i32 - 1) * ADVANCE as i32;
+    // Black backing (+1px pad beyond glyph bounds) so digits stay readable on fill.
+    clear_rect(frame, left - 2, y - 1, w + 4, DIGIT_H as i32 + 2);
+
     loop {
         let d = (score % 10) as u8;
         draw_digit(frame, right_x - (DIGIT_W as i32 - 1), y, d);

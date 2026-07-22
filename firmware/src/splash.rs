@@ -207,7 +207,7 @@ fn text_width(text: &[u8]) -> i32 {
     text.len() as i32 * (GLYPH_W as i32 + 1) - 1
 }
 
-/// All 16 levels cleared — `SQUARE DASH COMPLETE!` (72×40).
+/// All levels cleared — `SQUARE DASH COMPLETE!` (72×40).
 pub fn draw_complete(frame: &mut [u8; FRAME_LEN]) {
     framebuf::clear(frame);
     for x in 0..WIDTH as i32 {

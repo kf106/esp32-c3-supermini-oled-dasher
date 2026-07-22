@@ -28,11 +28,11 @@ Use **Chrome** or **Edge** on a computer. Plug the board in with USB, open the l
 
 ## Game
 
-- **16 levels**, difficulty **1–16** (HUD shows difficulty on the left, progress % on the right)
-- Terrain variety: flat (1–2, 9), 8px steps (3, 5, 7, 11–12, 15), hills (4, 6, 10, 14), mixed jumps + gradients (8, 13, 16)
+- **24 levels**, HUD shows **level number** (1–24) on the left, progress % on the right
+- Terrain variety: flat (1–2, 9), 8px steps (3, 5, 7, 11–12, 15), hills (4, 6, 10, 14), mixed jumps + gradients (8, 13, 16), **gravity flips** (17–21: flip+revert; 22–24: 3 / 4 / 5 flips)
 - Your original course is **difficulty 4**
 - Completing a level **unlocks the next** and saves to flash — reset or power-cycle resumes at that level
-- Clearing all sixteen shows **SQUARE DASH COMPLETE!** — tap BOOT to replay level 16
+- Clearing all twenty-one shows **SQUARE DASH COMPLETE!** — hold BOOT 2s on that screen (or the boot splash) to wipe back to level 1
 - **SQUARE DASH** splash for **5 seconds** on boot — **hold BOOT for 2 seconds** to wipe progress (`ERASED`)
 
 ## Build and flash
