@@ -1,6 +1,12 @@
 # OLED Dash — ESP32-C3 Mini OLED
 
-Geometry Dash–style **one-button** cube runner on the ESP32-C3 Supermini OLED (72×40).
+The ESP32-C3 Supermini OLED board is an incredibly cheap device. You can find them for less than €3 if you poke about on Temu or Aliexpress, especially if you buy several at once.
+
+However, the tiny 72x40 pixel screen that is only 0.42 inches across the diagonal, and the presence of only one button that can be used for input limits what you can do with it.
+
+Obviously, the best game to implement is ... a Geometry Dash-style **one-button** cube runner.
+
+<video src="assets/demo-vid.mp4" controls width="720"></video>
 
 Tap the **BOOT** button (GPIO9) to jump. Die → tap to retry. Finish a level → tap to play the next.
 
