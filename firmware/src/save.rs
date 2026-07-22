@@ -1,7 +1,10 @@
 //! Persist current level index across power cycles via SPI flash.
 //!
-//! Reads use the memory-mapped flash window (no ROM calls). Erase/write run
-//! from `.rwtext` (IRAM) under a critical section.
+//! The save record lives in a 4KB `.rodata` page so boot can **read** it through
+//! the DROM mmap (no ROM SPI). Erase/write still use ROM calls from `.rwtext`
+//! (IRAM). Flash address of that page is computed by `flash.sh` into
+//! `save_flash_offset.rs` (must match the ESP image segment layout — not
+//! `vaddr - 0x3C00_0000 + 0x10000`).
 
 use crate::level::LEVEL_COUNT;
 use critical_section::{acquire, release};
@@ -9,8 +12,6 @@ use critical_section::{acquire, release};
 const SECTOR_SIZE: u32 = 4096;
 const MAGIC: u32 = 0x4853_4144; // "DASH" LE
 const VERSION: u32 = 1;
-/// Cached / DROM flash mapping on ESP32-C3.
-const DROM_BASE: usize = 0x3C00_0000;
 
 /// ESP32-C3 ROM entry points (from esp32c3.rom.ld).
 const ROM_WRITE: usize = 0x4000_012c;
@@ -21,19 +22,29 @@ type RomWrite = unsafe extern "C" fn(u32, *const u32, u32) -> i32;
 type RomErase = unsafe extern "C" fn(u32) -> i32;
 type RomUnlock = unsafe extern "C" fn() -> i32;
 
+/// One flash sector, kept in DROM so it is MMU-mapped for reads after boot.
+#[repr(C, align(4096))]
+struct SavePage {
+    record: [u32; 4],
+    _pad: [u8; SECTOR_SIZE as usize - 16],
+}
+
+#[no_mangle]
+#[link_section = ".rodata"]
+#[used]
+static SAVE_PAGE: SavePage = SavePage {
+    record: [0xFFFF_FFFF; 4],
+    _pad: [0xFF; SECTOR_SIZE as usize - 16],
+};
+
 static mut CURRENT: u8 = 0;
 static mut LOADED: bool = false;
 static mut DIRTY: bool = false;
-/// Byte offset of the save sector; filled on first load/save.
-static mut SAVE_OFF: u32 = 0;
 
-fn ensure_save_off() -> u32 {
-    unsafe {
-        if SAVE_OFF == 0 {
-            SAVE_OFF = save_offset();
-        }
-        SAVE_OFF
-    }
+include!("save_flash_offset.rs");
+
+fn save_offset() -> u32 {
+    SAVE_FLASH_OFFSET
 }
 
 #[inline(always)]
@@ -55,24 +66,6 @@ fn rom_erase(sector: u32) -> i32 {
 fn rom_unlock() -> i32 {
     let f: RomUnlock = unsafe { core::mem::transmute(ROM_UNLOCK) };
     unsafe { f() }
-}
-
-fn flash_capacity_bytes() -> u32 {
-    // Flash size nibble lives in the image/chip header at offset 3.
-    let b = unsafe { core::ptr::read_volatile((DROM_BASE + 3) as *const u8) };
-    let mb = match b & 0xf0 {
-        0x00 => 1,
-        0x10 => 2,
-        0x20 => 4,
-        0x30 => 8,
-        0x40 => 16,
-        _ => 4,
-    };
-    mb * 1024 * 1024
-}
-
-fn save_offset() -> u32 {
-    flash_capacity_bytes().saturating_sub(SECTOR_SIZE)
 }
 
 fn checksum(magic: u32, version: u32, level: u32) -> u32 {
@@ -97,9 +90,9 @@ unsafe fn flash_commit(off: u32, words: *const u32) -> bool {
     ok
 }
 
-fn read_record_mapped() -> Option<u8> {
-    let off = ensure_save_off() as usize;
-    let p = (DROM_BASE + off) as *const u32;
+fn read_record() -> Option<u8> {
+    // Mapped .rodata — safe at boot (no ROM SPI).
+    let p = core::ptr::addr_of!(SAVE_PAGE.record) as *const u32;
     let magic = unsafe { core::ptr::read_volatile(p) };
     let version = unsafe { core::ptr::read_volatile(p.add(1)) };
     let level = unsafe { core::ptr::read_volatile(p.add(2)) };
@@ -120,7 +113,7 @@ fn read_record_mapped() -> Option<u8> {
 pub fn load_level() -> u8 {
     unsafe {
         if !LOADED {
-            CURRENT = read_record_mapped().unwrap_or(0);
+            CURRENT = read_record().unwrap_or(0);
             LOADED = true;
             DIRTY = false;
         }
@@ -159,20 +152,14 @@ pub fn clear_progress() {
 #[inline(never)]
 #[link_section = ".rwtext"]
 pub fn flush() {
-    let (level, off) = unsafe {
+    let level = unsafe {
         if !DIRTY {
             return;
         }
         DIRTY = false;
-        let level = CURRENT.min((LEVEL_COUNT - 1) as u8);
-        let off = if SAVE_OFF == 0 {
-            // 4MB default if never loaded; matches these boards.
-            4 * 1024 * 1024 - SECTOR_SIZE
-        } else {
-            SAVE_OFF
-        };
-        (level, off)
+        CURRENT.min((LEVEL_COUNT - 1) as u8)
     };
+    let off = save_offset();
 
     let level_u = u32::from(level);
     let magic = MAGIC;

@@ -10,24 +10,114 @@ unset CARGO_TARGET_DIR
 # Optional:
 #   PORT=/dev/ttyACM0 ./flash.sh
 #   MONITOR=1 ./flash.sh
+#   ./flash.sh 7   # seed progress to level 7 (patched into SAVE_PAGE in the image)
 PORT="${PORT:-}"
 MONITOR="${MONITOR:-0}"
 
-cargo build --release
+SEED_LEVEL=""
+if [[ $# -ge 1 ]]; then
+  if ! [[ "$1" =~ ^[0-9]+$ ]] || (( $1 < 1 || $1 > 16 )); then
+    echo "usage: ./flash.sh [level]" >&2
+    echo "  level: 1..16 — seed save progress for that level in the flashed image" >&2
+    exit 1
+  fi
+  SEED_LEVEL="$1"
+fi
 
 BIN="target/riscv32imc-unknown-none-elf/release/oled-dash"
 IMG="target/oled-dash-merged.bin"
+OFFSET_RS="src/save_flash_offset.rs"
 
-# Build a merged image, then patch the app descriptor exactly where this board's
-# bootloader expects it (factory app +0x40), and finally recompute image checks.
-espflash save-image --chip esp32c3 --merge --ignore-app-descriptor "$BIN" "$IMG" >/dev/null
+build_and_merge() {
+  cargo build --release
+  espflash save-image --chip esp32c3 --merge --ignore-app-descriptor "$BIN" "$IMG" >/dev/null
+}
 
-python3 - "$IMG" <<'PY'
+# Locate SAVE_PAGE in the merged ESP image (segment load addr + file offset).
+# Writes save_flash_offset.rs and prints the flash offset.
+sync_save_offset() {
+  python3 - "$IMG" "$BIN" "$OFFSET_RS" <<'PY'
+import struct
+import subprocess
+import sys
+
+img_path, elf_path, offset_rs = sys.argv[1], sys.argv[2], sys.argv[3]
+APP_BASE = 0x10000
+
+def save_page_vaddr(elf_path: str) -> int:
+    out = subprocess.check_output(["nm", elf_path], text=True)
+    for line in out.splitlines():
+        parts = line.split()
+        if len(parts) >= 3 and parts[-1] == "SAVE_PAGE":
+            return int(parts[0], 16)
+    raise SystemExit("SAVE_PAGE symbol not found in ELF (nm)")
+
+def save_page_flash_offset(img: bytes, vaddr: int) -> int:
+    magic = img[APP_BASE]
+    if magic != 0xE9:
+        raise SystemExit(f"bad ESP image magic at 0x{APP_BASE:X}: 0x{magic:02x}")
+    segments = img[APP_BASE + 1]
+    pos = APP_BASE + 24
+    for _ in range(segments):
+        load_addr, size = struct.unpack_from("<II", img, pos)
+        data_off = pos + 8
+        if load_addr <= vaddr < load_addr + size:
+            off = data_off + (vaddr - load_addr)
+            if off % 4096 != 0:
+                raise SystemExit(f"SAVE_PAGE flash offset 0x{off:X} is not sector-aligned")
+            return off
+        pos = data_off + size
+    raise SystemExit(f"SAVE_PAGE vaddr 0x{vaddr:X} not found in ESP image segments")
+
+img = open(img_path, "rb").read()
+vaddr = save_page_vaddr(elf_path)
+off = save_page_flash_offset(img, vaddr)
+text = (
+    "// Auto-updated by flash.sh from the linked ELF + merged image. Do not edit.\n"
+    f"pub const SAVE_FLASH_OFFSET: u32 = 0x{off:X};\n"
+)
+old = open(offset_rs).read() if __import__("os").path.exists(offset_rs) else ""
+if old != text:
+    open(offset_rs, "w").write(text)
+    print(f"updated {offset_rs}: SAVE_FLASH_OFFSET=0x{off:X}")
+    sys.exit(2)  # signal caller to rebuild
+print(f"SAVE_FLASH_OFFSET=0x{off:X}")
+print(off)
+PY
+}
+
+build_and_merge
+
+# Keep firmware constant in sync with image layout (may need one rebuild).
+set +e
+sync_out=$(sync_save_offset)
+sync_rc=$?
+set -e
+echo "$sync_out"
+if [[ "$sync_rc" -eq 2 ]]; then
+  build_and_merge
+  set +e
+  sync_out=$(sync_save_offset)
+  sync_rc=$?
+  set -e
+  echo "$sync_out"
+  if [[ "$sync_rc" -eq 2 ]]; then
+    echo "error: SAVE_FLASH_OFFSET kept changing after rebuild" >&2
+    exit 1
+  fi
+elif [[ "$sync_rc" -ne 0 ]]; then
+  exit "$sync_rc"
+fi
+
+SAVE_OFF=$(echo "$sync_out" | tail -n1)
+
+python3 - "$IMG" "$SAVE_OFF" "${SEED_LEVEL}" <<'PY'
 import hashlib
 import struct
 import sys
 
-path = sys.argv[1]
+path, save_off_s, seed = sys.argv[1], sys.argv[2], sys.argv[3]
+save_off = int(save_off_s, 0)
 APP_BASE = 0x10000
 APP_DESC_OFFSET = APP_BASE + 0x20 + 0x20
 
@@ -51,6 +141,19 @@ struct.pack_into("<H", desc, 176, 0)             # min_efuse_blk_rev_full
 struct.pack_into("<H", desc, 178, 0xFFFF)        # max_efuse_blk_rev_full
 desc[180] = 0                                    # mmu_page_size(log2)
 data[APP_DESC_OFFSET:APP_DESC_OFFSET + 256] = desc
+
+# Seed progress into SAVE_PAGE before checksum (inside the app image).
+if seed:
+    if len(data) < save_off + 16:
+        raise SystemExit(
+            f"merged image too small ({len(data)} bytes) to seed save at 0x{save_off:X}"
+        )
+    level = int(seed) - 1  # 1-based UI level -> 0-based save index
+    magic = 0x4853_4144  # "DASH"
+    version = 1
+    cksum = magic ^ version ^ level ^ 0xA5A5_C3C3
+    data[save_off : save_off + 16] = struct.pack("<IIII", magic, version, level, cksum)
+    print(f"seeding progress: level {seed} (index {level}) @ 0x{save_off:X}")
 
 # Recompute ESP image checksum for app partition at 0x10000.
 base = APP_BASE

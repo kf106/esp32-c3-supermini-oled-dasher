@@ -313,11 +313,20 @@ impl Game {
         // Variable-height ground. Fill style cycles every 6 levels:
         // 0 diagonal stripes, 1 opposite diagonal, 2 solid white,
         // 3 white dots on black, 4 solid black, 5 black dots on white.
+        let mut g_prev = ground_at(lvl, self.scroll);
         for sx in 0..WIDTH as i32 {
             let g = ground_at(lvl, self.scroll + sx);
             if g < HEIGHT as i32 {
                 // Contour line so black-fill levels still show the terrain edge.
                 framebuf::set_pixel(frame, sx, g, true);
+            }
+            // Vertical face at 8px (etc.) height changes — needed on black fill.
+            if sx > 0 && g != g_prev {
+                let y0 = g.min(g_prev);
+                let y1 = g.max(g_prev);
+                for y in y0..=y1 {
+                    framebuf::set_pixel(frame, sx, y, true);
+                }
             }
             for y in (g + 1)..HEIGHT as i32 {
                 let on = match fill {
@@ -332,6 +341,7 @@ impl Game {
                     framebuf::set_pixel(frame, sx, y, true);
                 }
             }
+            g_prev = g;
         }
 
         for obs in lvl.obstacles {
