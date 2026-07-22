@@ -307,16 +307,15 @@ impl Game {
         framebuf::clear(frame);
         let lvl = self.level();
 
-        // Variable-height ground (column by column).
+        // Variable-height ground (column by column). Solid fill — no checker
+        // hatch (that reads as "static" on this tiny panel).
         for sx in 0..WIDTH as i32 {
             let g = ground_at(lvl, self.scroll + sx);
             if g < HEIGHT as i32 {
                 framebuf::set_pixel(frame, sx, g, true);
             }
             for y in (g + 1)..HEIGHT as i32 {
-                if ((sx + y + self.scroll) & 2) == 0 {
-                    framebuf::set_pixel(frame, sx, y, true);
-                }
+                framebuf::set_pixel(frame, sx, y, true);
             }
         }
 

@@ -3,6 +3,10 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
+# Cursor shell sessions may set CARGO_TARGET_DIR to a shared cache; that makes
+# cargo write elsewhere while we flash a stale ELF from local target/.
+unset CARGO_TARGET_DIR
+
 # Optional:
 #   PORT=/dev/ttyACM0 ./flash.sh
 #   MONITOR=1 ./flash.sh

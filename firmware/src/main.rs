@@ -56,7 +56,7 @@ static ESP_APP_DESC: EspAppDesc = EspAppDesc {
     magic_word: ESP_APP_DESC_MAGIC_WORD,
     secure_version: 0,
     reserv1: [0; 2],
-    version: cstr_32("0.1.0"),
+    version: cstr_32("0.1.1"),
     project_name: cstr_32("oled-dash"),
     time: cstr_16("00:00:00"),
     date: cstr_16("1970-01-01"),
@@ -96,21 +96,19 @@ fn main() -> ! {
     let peripherals = esp_hal::init(Config::default());
 
     let io = esp_hal::gpio::Io::new(peripherals.GPIO, peripherals.IO_MUX);
-    let boot = BootButton::new(Input::new(io.pins.gpio9, Pull::Up));
     let i2c = I2c::new(peripherals.I2C0, io.pins.gpio5, io.pins.gpio6, 400.kHz());
     let mut display = Display::new(i2c);
     let delay = Delay::new();
+    let mut boot = BootButton::new(Input::new(io.pins.gpio9, Pull::Up));
 
     let mut frame = [0u8; FRAME_LEN];
 
-    // Boot splash: drawn with the same framebuf primitives as the game
     splash::draw(&mut frame);
     display.show(&frame);
     delay.delay_millis(SPLASH_MS);
 
     let saved = save::load_level();
     let mut game = Game::new(saved);
-    let mut boot = boot;
 
     loop {
         let jump = boot.pressed_edge();
