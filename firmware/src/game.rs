@@ -308,16 +308,27 @@ impl Game {
 
         framebuf::clear(frame);
         let lvl = self.level();
+        let fill = self.level_index as usize % 6;
 
-        // Variable-height ground (column by column). Checker hatch reads as
-        // "stripes" on this panel; solid fill is too heavy.
+        // Variable-height ground. Fill style cycles every 6 levels:
+        // 0 diagonal stripes, 1 opposite diagonal, 2 solid white,
+        // 3 white dots on black, 4 solid black, 5 black dots on white.
         for sx in 0..WIDTH as i32 {
             let g = ground_at(lvl, self.scroll + sx);
             if g < HEIGHT as i32 {
+                // Contour line so black-fill levels still show the terrain edge.
                 framebuf::set_pixel(frame, sx, g, true);
             }
             for y in (g + 1)..HEIGHT as i32 {
-                if ((sx + y + self.scroll) & 2) == 0 {
+                let on = match fill {
+                    0 => ((sx + y + self.scroll) & 2) == 0,
+                    1 => ((sx - y + self.scroll) & 2) == 0,
+                    2 => true,
+                    3 => (sx.wrapping_add(self.scroll) & 1) == 0 && (y & 1) == 0,
+                    4 => false,
+                    _ => !((sx.wrapping_add(self.scroll) & 1) == 0 && (y & 1) == 0),
+                };
+                if on {
                     framebuf::set_pixel(frame, sx, y, true);
                 }
             }
@@ -345,8 +356,13 @@ impl Game {
             _ => true,
         };
         if show_cube {
-            framebuf::fill_rect(frame, PLAYER_SX, self.y, CUBE, CUBE);
-            framebuf::set_pixel(frame, PLAYER_SX + 3, self.y + 1, false);
+            // Outline on black-fill levels so the cube stays visible; otherwise solid.
+            let ground_fill = self.level_index as usize % 6;
+            if ground_fill == 4 {
+                framebuf::stroke_rect(frame, PLAYER_SX, self.y, CUBE, CUBE);
+            } else {
+                framebuf::fill_rect(frame, PLAYER_SX, self.y, CUBE, CUBE);
+            }
         }
 
         // HUD: difficulty (1-16) left, progress % right

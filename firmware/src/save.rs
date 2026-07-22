@@ -1,8 +1,7 @@
 //! Persist current level index across power cycles via SPI flash.
 //!
-//! Erase/write must run from `.rwtext` (IRAM) under a critical section. Calling
-//! the ROM flash drivers from XIP code (the previous approach) stalls instruction
-//! fetch and leaves the OLED showing static.
+//! Reads use the memory-mapped flash window (no ROM calls). Erase/write run
+//! from `.rwtext` (IRAM) under a critical section.
 
 use crate::level::LEVEL_COUNT;
 use critical_section::{acquire, release};
@@ -10,26 +9,31 @@ use critical_section::{acquire, release};
 const SECTOR_SIZE: u32 = 4096;
 const MAGIC: u32 = 0x4853_4144; // "DASH" LE
 const VERSION: u32 = 1;
+/// Cached / DROM flash mapping on ESP32-C3.
+const DROM_BASE: usize = 0x3C00_0000;
 
 /// ESP32-C3 ROM entry points (from esp32c3.rom.ld).
-const ROM_READ: usize = 0x4000_0130;
 const ROM_WRITE: usize = 0x4000_012c;
 const ROM_ERASE_SECTOR: usize = 0x4000_0128;
 const ROM_UNLOCK: usize = 0x4000_0140;
 
-type RomRead = unsafe extern "C" fn(u32, *mut u32, u32) -> i32;
 type RomWrite = unsafe extern "C" fn(u32, *const u32, u32) -> i32;
 type RomErase = unsafe extern "C" fn(u32) -> i32;
 type RomUnlock = unsafe extern "C" fn() -> i32;
 
 static mut CURRENT: u8 = 0;
 static mut LOADED: bool = false;
+static mut DIRTY: bool = false;
+/// Byte offset of the save sector; filled on first load/save.
+static mut SAVE_OFF: u32 = 0;
 
-#[inline(always)]
-#[link_section = ".rwtext"]
-fn rom_read(addr: u32, data: *mut u32, len: u32) -> i32 {
-    let f: RomRead = unsafe { core::mem::transmute(ROM_READ) };
-    unsafe { f(addr, data, len) }
+fn ensure_save_off() -> u32 {
+    unsafe {
+        if SAVE_OFF == 0 {
+            SAVE_OFF = save_offset();
+        }
+        SAVE_OFF
+    }
 }
 
 #[inline(always)]
@@ -54,12 +58,9 @@ fn rom_unlock() -> i32 {
 }
 
 fn flash_capacity_bytes() -> u32 {
-    let mut word = [0u32; 1];
-    let rc = rom_read(0, word.as_mut_ptr(), 4);
-    if rc != 0 {
-        return 4 * 1024 * 1024;
-    }
-    let mb = match word[0].to_le_bytes()[3] & 0xf0 {
+    // Flash size nibble lives in the image/chip header at offset 3.
+    let b = unsafe { core::ptr::read_volatile((DROM_BASE + 3) as *const u8) };
+    let mb = match b & 0xf0 {
         0x00 => 1,
         0x10 => 2,
         0x20 => 4,
@@ -96,16 +97,13 @@ unsafe fn flash_commit(off: u32, words: *const u32) -> bool {
     ok
 }
 
-fn read_record() -> Option<u8> {
-    let mut words = [0u32; 4];
-    let off = save_offset();
-    if rom_read(off, words.as_mut_ptr(), 16) != 0 {
-        return None;
-    }
-    let magic = words[0];
-    let version = words[1];
-    let level = words[2];
-    let sum = words[3];
+fn read_record_mapped() -> Option<u8> {
+    let off = ensure_save_off() as usize;
+    let p = (DROM_BASE + off) as *const u32;
+    let magic = unsafe { core::ptr::read_volatile(p) };
+    let version = unsafe { core::ptr::read_volatile(p.add(1)) };
+    let level = unsafe { core::ptr::read_volatile(p.add(2)) };
+    let sum = unsafe { core::ptr::read_volatile(p.add(3)) };
     if magic != MAGIC || version != VERSION {
         return None;
     }
@@ -122,34 +120,64 @@ fn read_record() -> Option<u8> {
 pub fn load_level() -> u8 {
     unsafe {
         if !LOADED {
-            CURRENT = read_record().unwrap_or(0);
+            CURRENT = read_record_mapped().unwrap_or(0);
             LOADED = true;
+            DIRTY = false;
         }
         CURRENT.min((LEVEL_COUNT - 1) as u8)
     }
 }
 
+/// RAM-only update (no SPI). Call [`flush`] later to persist.
+pub fn set_level_ram(level: u8) {
+    unsafe {
+        CURRENT = level.min((LEVEL_COUNT - 1) as u8);
+        LOADED = true;
+        DIRTY = true;
+    }
+}
+
 /// Persist level index (clamped). Survives reset and power-cycle.
 pub fn save_level(level: u8) {
-    let level = level.min((LEVEL_COUNT - 1) as u8);
-    unsafe {
-        if LOADED && CURRENT == level {
+    set_level_ram(level);
+    flush();
+}
+
+/// Wipe progress back to level 1 (index 0) in RAM. Call [`flush`] to persist.
+pub fn clear_progress_ram() {
+    set_level_ram(0);
+}
+
+/// Wipe + persist immediately.
+#[allow(dead_code)]
+pub fn clear_progress() {
+    clear_progress_ram();
+    flush();
+}
+
+/// Write dirty RAM progress to flash (safe to call after the display is running).
+#[inline(never)]
+#[link_section = ".rwtext"]
+pub fn flush() {
+    let (level, off) = unsafe {
+        if !DIRTY {
             return;
         }
-        CURRENT = level;
-        LOADED = true;
-    }
+        DIRTY = false;
+        let level = CURRENT.min((LEVEL_COUNT - 1) as u8);
+        let off = if SAVE_OFF == 0 {
+            // 4MB default if never loaded; matches these boards.
+            4 * 1024 * 1024 - SECTOR_SIZE
+        } else {
+            SAVE_OFF
+        };
+        (level, off)
+    };
 
     let level_u = u32::from(level);
     let magic = MAGIC;
     let version = VERSION;
     let sum = checksum(magic, version, level_u);
     let words: [u32; 4] = [magic, version, level_u, sum];
-    let off = save_offset();
     let _ = unsafe { flash_commit(off, words.as_ptr()) };
-}
-
-/// Wipe progress back to level 1 (index 0) and persist.
-pub fn clear_progress() {
-    save_level(0);
 }

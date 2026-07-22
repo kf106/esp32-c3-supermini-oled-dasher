@@ -107,34 +107,51 @@ fn main() -> ! {
 
     let mut frame = [0u8; FRAME_LEN];
 
-    // Splash: hold BOOT for RESET_HOLD_MS to wipe progress (after ROM boot, so
-    // this does not enter download mode).
+    // Splash: hold BOOT for RESET_HOLD_MS to wipe progress (no flash I/O here).
     splash::draw(&mut frame);
     display.show(&frame);
-    let mut elapsed = 0u32;
+
+    let polls = SPLASH_MS / SPLASH_POLL_MS;
     let mut held = 0u32;
     let mut wiped = false;
-    while elapsed < SPLASH_MS {
+    for _ in 0..polls {
         delay.delay_millis(SPLASH_POLL_MS);
-        elapsed = elapsed.saturating_add(SPLASH_POLL_MS);
         if boot.is_down() {
             held = held.saturating_add(SPLASH_POLL_MS);
             if !wiped && held >= RESET_HOLD_MS {
-                save::clear_progress();
-                splash::draw_erased(&mut frame);
-                display.show(&frame);
                 wiped = true;
             }
         } else {
             held = 0;
         }
-        let _ = boot.pressed_edge(); // keep edge state in sync
+        let _ = boot.pressed_edge();
+    }
+    boot.sync();
+
+    if wiped {
+        save::clear_progress_ram();
+        splash::draw_erased(&mut frame);
+        display.show(&frame);
+        delay.delay_millis(400);
     }
 
-    let saved = save::load_level();
+    let saved = if wiped { 0 } else { save::load_level() };
     let mut game = Game::new(saved);
+    // Persist wipe after the game is visibly running (immediate flash write
+    // after splash was unreliable on this board).
+    let mut persist_in = if wiped { 60u32 } else { 0 };
+
+    game.draw(&mut frame);
+    display.show(&frame);
 
     loop {
+        if persist_in == 1 {
+            save::flush();
+        }
+        if persist_in > 0 {
+            persist_in -= 1;
+        }
+
         let jump = boot.pressed_edge();
         if game.update(jump) {
             led::flash_three(&mut led, &delay);

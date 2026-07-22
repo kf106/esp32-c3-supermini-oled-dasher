@@ -33,7 +33,7 @@ Use **Chrome** or **Edge** on a computer. Plug the board in with USB, open the l
 - Your original course is **difficulty 4**
 - Completing a level **unlocks the next** and saves to flash — reset or power-cycle resumes at that level
 - Clearing all sixteen shows **SQUARE DASH COMPLETE!** — tap BOOT to replay level 16
-- **SQUARE DASH** splash for **5 seconds** on boot — **hold BOOT for 2 seconds** during the splash to wipe progress (`ERASED`)
+- **SQUARE DASH** splash for **5 seconds** on boot — **hold BOOT for 2 seconds** to wipe progress (`ERASED`)
 
 ### Splash
 

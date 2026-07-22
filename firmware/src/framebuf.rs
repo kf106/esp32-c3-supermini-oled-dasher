@@ -31,6 +31,20 @@ pub fn fill_rect(frame: &mut [u8; FRAME_LEN], x: i32, y: i32, w: i32, h: i32) {
     }
 }
 
+pub fn stroke_rect(frame: &mut [u8; FRAME_LEN], x: i32, y: i32, w: i32, h: i32) {
+    if w <= 0 || h <= 0 {
+        return;
+    }
+    for px in x..x + w {
+        set_pixel(frame, px, y, true);
+        set_pixel(frame, px, y + h - 1, true);
+    }
+    for py in y..y + h {
+        set_pixel(frame, x, py, true);
+        set_pixel(frame, x + w - 1, py, true);
+    }
+}
+
 pub fn fill_spike_up(frame: &mut [u8; FRAME_LEN], base_x: i32, base_y: i32, w: i32, h: i32) {
     // Apex at (base_x + w/2, base_y - h + 1), base from base_x..base_x+w-1 at base_y
     for row in 0..h {

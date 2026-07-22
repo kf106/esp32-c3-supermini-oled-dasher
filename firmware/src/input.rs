@@ -9,15 +9,22 @@ pub struct BootButton<'d> {
 
 impl<'d> BootButton<'d> {
     pub fn new(pin: Input<'d>) -> Self {
+        // Match current level so a held button at init is not a phantom edge.
+        let down = pin.is_low();
         Self {
             pin,
-            was_down: false,
+            was_down: down,
         }
     }
 
     /// True while BOOT is held (active-low).
     pub fn is_down(&self) -> bool {
         self.pin.is_low()
+    }
+
+    /// Align edge detector with the current pin level (no event).
+    pub fn sync(&mut self) {
+        self.was_down = self.is_down();
     }
 
     /// True on the frame the button goes from released → pressed.
