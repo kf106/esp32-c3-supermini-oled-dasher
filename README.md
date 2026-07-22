@@ -19,16 +19,18 @@ Tap the **BOOT** button (GPIO9) to jump. Die → tap to retry. Finish a level �
 - Terrain variety: flat (1–2, 9), 8px steps (3, 5, 7, 11–12, 15), hills (4, 6, 10, 14), mixed jumps + gradients (8, 13, 16)
 - Your original course is **difficulty 4**
 - Completing a level **unlocks the next** and saves to flash — unplug and plug back in to resume there
-- Clearing all sixteen keeps you on level 16
+- Clearing all sixteen shows **SQUARE DASH COMPLETE!** — tap BOOT to replay level 16
 - **SQUARE DASH** splash for 3 seconds on boot
 
 ### Splash
 
-![SQUARE DASH splash](assets/splash.png)
+![`assets/splash-72x40.png`](assets/splash-72x40.png)
 
-This PNG is generated from the **same draw code** the device runs (`splash::draw`).  
-Regenerate: `python3 firmware/tools/gen_splash.py`  
-Native 72×40: [`assets/splash-72x40.png`](assets/splash-72x40.png)
+### Complete
+
+![SQUARE DASH COMPLETE](assets/complete.png)
+
+Shown after beating level 16 (`splash::draw_complete`). Native: [`assets/complete-72x40.png`](assets/complete-72x40.png)
 
 ## Course maps
 
@@ -88,4 +90,4 @@ firmware/src/
 
 ## License
 
-MIT OR Apache-2.0
+[MIT](LICENSE.md)

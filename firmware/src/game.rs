@@ -3,6 +3,7 @@
 use crate::framebuf;
 use crate::level::{self, ground_at, Kind, Level, TerrainMode, LEVEL_COUNT};
 use crate::save;
+use crate::splash;
 use crate::ssd1306::{FRAME_LEN, HEIGHT, WIDTH};
 
 const CUBE: i32 = 5;
@@ -22,6 +23,8 @@ enum Phase {
     Playing,
     Dead { timer: u8 },
     Won { timer: u8 },
+    /// Finished level 16 — show complete splash until BOOT.
+    Complete { timer: u8 },
 }
 
 pub struct Game {
@@ -117,6 +120,16 @@ impl Game {
                 }
                 return;
             }
+            Phase::Complete { timer } => {
+                if timer > 0 {
+                    self.phase = Phase::Complete { timer: timer - 1 };
+                } else if jump_pressed {
+                    // Replay the final level.
+                    self.attempts = 1;
+                    self.reset_run();
+                }
+                return;
+            }
             Phase::Playing => {}
         }
 
@@ -156,10 +169,11 @@ impl Game {
         // Persist the level you'll play next (survives unplug on the win screen).
         if (self.level_index as usize) + 1 < LEVEL_COUNT {
             save::save_level(self.level_index + 1);
+            self.phase = Phase::Won { timer: 70 };
         } else {
             save::save_level(self.level_index);
+            self.phase = Phase::Complete { timer: 90 };
         }
-        self.phase = Phase::Won { timer: 70 };
     }
 
     fn advance_after_win(&mut self) {
@@ -285,6 +299,11 @@ impl Game {
     }
 
     pub fn draw(&self, frame: &mut [u8; FRAME_LEN]) {
+        if matches!(self.phase, Phase::Complete { .. }) {
+            splash::draw_complete(frame);
+            return;
+        }
+
         framebuf::clear(frame);
         let lvl = self.level();
 
