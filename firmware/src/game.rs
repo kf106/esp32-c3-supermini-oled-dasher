@@ -101,7 +101,8 @@ impl Game {
         ((self.scroll * 100) / len).min(100) as u32
     }
 
-    pub fn update(&mut self, jump_pressed: bool) {
+    /// Returns `true` on the frame a level is cleared (for LED celebrate).
+    pub fn update(&mut self, jump_pressed: bool) -> bool {
         match self.phase {
             Phase::Dead { timer } => {
                 if timer > 0 {
@@ -110,7 +111,7 @@ impl Game {
                     self.attempts = self.attempts.saturating_add(1);
                     self.reset_run();
                 }
-                return;
+                return false;
             }
             Phase::Won { timer } => {
                 if timer > 0 {
@@ -118,7 +119,7 @@ impl Game {
                 } else if jump_pressed {
                     self.advance_after_win();
                 }
-                return;
+                return false;
             }
             Phase::Complete { timer } => {
                 if timer > 0 {
@@ -128,7 +129,7 @@ impl Game {
                     self.attempts = 1;
                     self.reset_run();
                 }
-                return;
+                return false;
             }
             Phase::Playing => {}
         }
@@ -138,7 +139,7 @@ impl Game {
 
         if self.scroll >= self.level().length {
             self.on_level_complete();
-            return;
+            return true;
         }
 
         if jump_pressed && self.on_ground {
@@ -163,6 +164,7 @@ impl Game {
         if self.hits_hazard() || self.buried_in_terrain() {
             self.phase = Phase::Dead { timer: 40 };
         }
+        false
     }
 
     fn on_level_complete(&mut self) {

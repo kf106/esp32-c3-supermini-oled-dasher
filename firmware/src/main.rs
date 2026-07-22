@@ -8,6 +8,7 @@ mod font;
 mod framebuf;
 mod game;
 mod input;
+mod led;
 mod level;
 mod save;
 mod splash;
@@ -17,7 +18,7 @@ use esp_backtrace as _;
 use esp_hal::{
     delay::Delay,
     entry,
-    gpio::{Input, Pull},
+    gpio::{Input, Level, Output, Pull},
     i2c::I2c,
     prelude::*,
     Config,
@@ -101,6 +102,8 @@ fn main() -> ! {
     let mut display = Display::new(i2c);
     let delay = Delay::new();
     let mut boot = BootButton::new(Input::new(io.pins.gpio9, Pull::Up));
+    // Blue LED: active-low, start off (high).
+    let mut led = Output::new(io.pins.gpio8, Level::High);
 
     let mut frame = [0u8; FRAME_LEN];
 
@@ -133,7 +136,9 @@ fn main() -> ! {
 
     loop {
         let jump = boot.pressed_edge();
-        game.update(jump);
+        if game.update(jump) {
+            led::flash_three(&mut led, &delay);
+        }
         game.draw(&mut frame);
         display.show(&frame);
         delay.delay_millis(TICK_MS);

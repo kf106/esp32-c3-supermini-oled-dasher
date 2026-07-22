@@ -16,6 +16,7 @@ Tap the **BOOT** button (GPIO9) to jump. Die → tap to retry. Finish a level �
 |----------|------|-------|
 | I2C SDA | 5 | 400 kHz, onboard OLED |
 | I2C SCL | 6 | onboard OLED |
+| Blue LED | 8 | active-low — flashes 3× on level clear |
 | BOOT button | 9 | active-low, internal pull-up — **jump / restart / next** |
 | Display | — | SSD1306 `0x3C`, **72×40**, MONO_VLSB |
 
