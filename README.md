@@ -35,37 +35,6 @@ Use **Chrome** or **Edge** on a computer. Plug the board in with USB, open the l
 - Clearing all sixteen shows **SQUARE DASH COMPLETE!** — tap BOOT to replay level 16
 - **SQUARE DASH** splash for **5 seconds** on boot — **hold BOOT for 2 seconds** to wipe progress (`ERASED`)
 
-### Splash
-
-![`assets/splash-72x40.png`](assets/splash-72x40.png)
-
-## Course maps
-
-PNGs live in [`assets/courses/`](assets/courses/). Regenerate with:
-
-```bash
-python3 firmware/tools/gen_course_maps.py
-```
-
-| Level | File |
-|------:|------|
-| 1 | [`level-01.png`](assets/courses/level-01.png) |
-| 2 | [`level-02.png`](assets/courses/level-02.png) |
-| 3 | [`level-03.png`](assets/courses/level-03.png) |
-| 4 | [`level-04.png`](assets/courses/level-04.png) |
-| 5 | [`level-05.png`](assets/courses/level-05.png) |
-| 6 | [`level-06.png`](assets/courses/level-06.png) |
-| 7 | [`level-07.png`](assets/courses/level-07.png) |
-| 8 | [`level-08.png`](assets/courses/level-08.png) |
-| 9 | [`level-09.png`](assets/courses/level-09.png) |
-| 10 | [`level-10.png`](assets/courses/level-10.png) |
-| 11 | [`level-11.png`](assets/courses/level-11.png) |
-| 12 | [`level-12.png`](assets/courses/level-12.png) |
-| 13 | [`level-13.png`](assets/courses/level-13.png) |
-| 14 | [`level-14.png`](assets/courses/level-14.png) |
-| 15 | [`level-15.png`](assets/courses/level-15.png) |
-| 16 | [`level-16.png`](assets/courses/level-16.png) |
-
 ## Build and flash
 
 From a terminal (Rust + `espflash`):
