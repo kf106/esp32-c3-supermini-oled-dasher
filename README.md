@@ -24,9 +24,9 @@ Tap the **BOOT** button (GPIO9) to jump. Die → tap to retry. Finish a level �
 - **16 levels**, difficulty **1–16** (HUD shows difficulty on the left, progress % on the right)
 - Terrain variety: flat (1–2, 9), 8px steps (3, 5, 7, 11–12, 15), hills (4, 6, 10, 14), mixed jumps + gradients (8, 13, 16)
 - Your original course is **difficulty 4**
-- Completing a level **unlocks the next** (progress is kept in RAM for this session; power-cycle starts at level 1)
+- Completing a level **unlocks the next** and saves to flash — reset or power-cycle resumes at that level
 - Clearing all sixteen shows **SQUARE DASH COMPLETE!** — tap BOOT to replay level 16
-- **SQUARE DASH** splash for 3 seconds on boot
+- **SQUARE DASH** splash for **5 seconds** on boot — **hold BOOT for 2 seconds** during the splash to wipe progress (`ERASED`)
 
 ### Splash
 

@@ -6,6 +6,7 @@ license = "MIT OR Apache-2.0"
 description = "Geometry Dash–style one-button runner on ESP32-C3 Supermini OLED (72×40)"
 
 [dependencies]
+critical-section = "1.2.0"
 embedded-hal = "1.0.0"
 embedded-io = "0.6.1"
 esp-backtrace = { version = "0.14.2", features = [

@@ -24,10 +24,11 @@ use esp_hal::{
 };
 use game::Game;
 use input::BootButton;
-use splash::SPLASH_MS;
+use splash::{RESET_HOLD_MS, SPLASH_MS};
 use ssd1306::{Display, FRAME_LEN};
 
 const TICK_MS: u32 = 33;
+const SPLASH_POLL_MS: u32 = 20;
 
 const ESP_APP_DESC_MAGIC_WORD: u32 = 0xABCD5432;
 
@@ -56,7 +57,7 @@ static ESP_APP_DESC: EspAppDesc = EspAppDesc {
     magic_word: ESP_APP_DESC_MAGIC_WORD,
     secure_version: 0,
     reserv1: [0; 2],
-    version: cstr_32("0.1.1"),
+    version: cstr_32("0.1.2"),
     project_name: cstr_32("oled-dash"),
     time: cstr_16("00:00:00"),
     date: cstr_16("1970-01-01"),
@@ -103,9 +104,29 @@ fn main() -> ! {
 
     let mut frame = [0u8; FRAME_LEN];
 
+    // Splash: hold BOOT for RESET_HOLD_MS to wipe progress (after ROM boot, so
+    // this does not enter download mode).
     splash::draw(&mut frame);
     display.show(&frame);
-    delay.delay_millis(SPLASH_MS);
+    let mut elapsed = 0u32;
+    let mut held = 0u32;
+    let mut wiped = false;
+    while elapsed < SPLASH_MS {
+        delay.delay_millis(SPLASH_POLL_MS);
+        elapsed = elapsed.saturating_add(SPLASH_POLL_MS);
+        if boot.is_down() {
+            held = held.saturating_add(SPLASH_POLL_MS);
+            if !wiped && held >= RESET_HOLD_MS {
+                save::clear_progress();
+                splash::draw_erased(&mut frame);
+                display.show(&frame);
+                wiped = true;
+            }
+        } else {
+            held = 0;
+        }
+        let _ = boot.pressed_edge(); // keep edge state in sync
+    }
 
     let saved = save::load_level();
     let mut game = Game::new(saved);

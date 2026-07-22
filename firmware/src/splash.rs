@@ -6,7 +6,9 @@
 use crate::framebuf;
 use crate::ssd1306::{FRAME_LEN, HEIGHT, WIDTH};
 
-pub const SPLASH_MS: u32 = 3000;
+pub const SPLASH_MS: u32 = 5000;
+/// Hold BOOT this long during the splash to wipe saved progress.
+pub const RESET_HOLD_MS: u32 = 2000;
 
 /// 5×7 capitals for the boot splash (rows, MSB = leftmost pixel).
 const GLYPH_W: usize = 5;
@@ -45,6 +47,33 @@ fn draw_text(frame: &mut [u8; FRAME_LEN], mut x: i32, y: i32, text: &[u8]) {
         draw_char(frame, x, y, ch);
         x += GLYPH_W as i32 + 1;
     }
+}
+
+fn text_width_boot(text: &[u8]) -> i32 {
+    if text.is_empty() {
+        return 0;
+    }
+    text.len() as i32 * (GLYPH_W as i32 + 1) - 1
+}
+
+/// Confirmation after a splash long-press wipe ("ERASED" uses boot glyphs only).
+pub fn draw_erased(frame: &mut [u8; FRAME_LEN]) {
+    framebuf::clear(frame);
+    for x in 0..WIDTH as i32 {
+        framebuf::set_pixel(frame, x, 0, true);
+        framebuf::set_pixel(frame, x, HEIGHT as i32 - 1, true);
+    }
+    for y in 0..HEIGHT as i32 {
+        framebuf::set_pixel(frame, 0, y, true);
+        framebuf::set_pixel(frame, WIDTH as i32 - 1, y, true);
+    }
+    let msg = b"ERASED";
+    draw_text(
+        frame,
+        (WIDTH as i32 - text_width_boot(msg)) / 2,
+        (HEIGHT as i32 - GLYPH_H as i32) / 2,
+        msg,
+    );
 }
 
 /// Paint the SQUARE DASH splash into `frame` (72×40).
