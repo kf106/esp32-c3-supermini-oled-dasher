@@ -6,7 +6,7 @@ However, the tiny 72x40 pixel screen that is only 0.42 inches across the diagona
 
 Obviously, the best game to implement is ... a Geometry Dash-style **one-button** cube runner.
 
-<video src="assets/demo-vid.mp4" controls width="720"></video>
+![`assets/demo.gif`](assets/splash-72x40.png)
 
 Tap the **BOOT** button (GPIO9) to jump. Die → tap to retry. Finish a level → tap to play the next.
 
@@ -31,12 +31,6 @@ Tap the **BOOT** button (GPIO9) to jump. Die → tap to retry. Finish a level �
 ### Splash
 
 ![`assets/splash-72x40.png`](assets/splash-72x40.png)
-
-### Complete
-
-![SQUARE DASH COMPLETE](assets/complete.png)
-
-Shown after beating level 16 (`splash::draw_complete`). Native: [`assets/complete-72x40.png`](assets/complete-72x40.png)
 
 ## Course maps
 
