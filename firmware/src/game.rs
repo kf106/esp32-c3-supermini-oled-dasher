@@ -11,7 +11,8 @@ const PLAYER_SX: i32 = 14;
 
 const GRAVITY: i32 = 1;
 const JUMP_VEL: i32 = -5;
-const SCROLL: i32 = 2;
+const SCROLL_SLOW: i32 = 2;
+const SCROLL_FAST: i32 = 4;
 
 const SPIKE_W: i32 = 6;
 const SPIKE_H: i32 = 6;
@@ -30,6 +31,10 @@ enum Phase {
 pub struct Game {
     level_index: u8,
     scroll: i32,
+    /// Current scroll step (2 or 4); toggled by clearing SpeedBlocks.
+    scroll_speed: i32,
+    /// Bit i set ⇒ SpeedBlock at obstacles[i] already triggered.
+    speed_triggers: u32,
     y: i32,
     vy: i32,
     on_ground: bool,
@@ -45,6 +50,8 @@ impl Game {
         let mut g = Self {
             level_index,
             scroll: 0,
+            scroll_speed: SCROLL_SLOW,
+            speed_triggers: 0,
             y: 0,
             vy: 0,
             on_ground: true,
@@ -61,6 +68,8 @@ impl Game {
         Self {
             level_index: (LEVEL_COUNT - 1) as u8,
             scroll: 0,
+            scroll_speed: SCROLL_SLOW,
+            speed_triggers: 0,
             y: 0,
             vy: 0,
             on_ground: true,
@@ -135,7 +144,7 @@ impl Game {
         let contact = self.contact_y();
 
         for obs in lvl.obstacles {
-            if obs.kind != Kind::Block {
+            if obs.kind != Kind::Block && obs.kind != Kind::SpeedBlock {
                 continue;
             }
             let ox = obs.x;
@@ -170,6 +179,8 @@ impl Game {
 
     fn reset_run(&mut self) {
         self.scroll = 0;
+        self.scroll_speed = SCROLL_SLOW;
+        self.speed_triggers = 0;
         self.vy = 0;
         self.tick = 0;
         self.on_ground = true;
@@ -216,15 +227,18 @@ impl Game {
         }
 
         let prev_inv = self.inverted();
+        let prev_px = self.player_world_x();
 
         // Scroll first so a jump on the frame a block arrives can still clear it.
-        self.scroll += SCROLL;
+        self.scroll += self.scroll_speed;
         self.tick = self.tick.wrapping_add(1);
 
         if self.scroll >= self.level().length {
             self.on_level_complete();
             return true;
         }
+
+        self.check_speed_gates(prev_px);
 
         // Crossing a flip line: drop grounded state so we don't stick in the old surface.
         if self.inverted() != prev_inv {
@@ -278,6 +292,35 @@ impl Game {
         } else {
             save::set_all_clear_ram();
             self.phase = Phase::Complete { timer: 90 };
+        }
+    }
+
+    /// After the cube clears the right edge of a SpeedBlock, toggle scroll 2↔4.
+    /// Surviving past the block implies a jump-over (walking into the face is lethal).
+    fn check_speed_gates(&mut self, prev_px: i32) {
+        let px = self.player_world_x();
+        let lvl = self.level();
+        for (i, obs) in lvl.obstacles.iter().enumerate() {
+            if obs.kind != Kind::SpeedBlock {
+                continue;
+            }
+            if i >= 32 {
+                break;
+            }
+            let bit = 1u32 << i;
+            if self.speed_triggers & bit != 0 {
+                continue;
+            }
+            let right = obs.x + BLOCK_W;
+            // Crossed the gate's trailing edge this frame.
+            if prev_px <= right && px > right {
+                self.scroll_speed = if self.scroll_speed == SCROLL_SLOW {
+                    SCROLL_FAST
+                } else {
+                    SCROLL_SLOW
+                };
+                self.speed_triggers |= bit;
+            }
         }
     }
 
@@ -375,7 +418,7 @@ impl Game {
         let lvl = self.level();
         let px = self.player_world_x();
         for obs in lvl.obstacles {
-            if obs.kind != Kind::Block {
+            if obs.kind != Kind::Block && obs.kind != Kind::SpeedBlock {
                 continue;
             }
             let ox = obs.x;
@@ -451,7 +494,7 @@ impl Game {
                         return true;
                     }
                 }
-                Kind::Block => {
+                Kind::Block | Kind::SpeedBlock => {
                     let mid = obs.x + BLOCK_W / 2;
                     let surf = self.surface_at(mid);
                     let bx = obs.x;
@@ -561,7 +604,7 @@ impl Game {
             let mid = ox
                 + match obs.kind {
                     Kind::Spike | Kind::MovingSpike => SPIKE_W / 2,
-                    Kind::Block => BLOCK_W / 2,
+                    Kind::Block | Kind::SpeedBlock => BLOCK_W / 2,
                 };
             let surf = self.surface_at(mid);
             let inv = self.inverted_at(mid);
@@ -585,6 +628,14 @@ impl Game {
                         framebuf::fill_rect(frame, sx, surf, BLOCK_W, BLOCK_H);
                     } else {
                         framebuf::fill_rect(frame, sx, surf - BLOCK_H, BLOCK_W, BLOCK_H);
+                    }
+                }
+                Kind::SpeedBlock => {
+                    // Hollow rect so speed gates read differently from solid blocks.
+                    if inv {
+                        framebuf::stroke_rect(frame, sx, surf, BLOCK_W, BLOCK_H);
+                    } else {
+                        framebuf::stroke_rect(frame, sx, surf - BLOCK_H, BLOCK_W, BLOCK_H);
                     }
                 }
             }
