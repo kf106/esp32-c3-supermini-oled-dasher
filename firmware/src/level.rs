@@ -1,4 +1,4 @@
-//! Thirty courses — HUD shows level number 1..=30.
+//! Thirty-four courses — HUD shows level number 1..=34.
 //!
 //! Terrain variety (difficulty still rises overall through 16):
 //! - Flat: 1, 2, 9
@@ -9,6 +9,7 @@
 //! - Multi gravity flips (3 / 4 / 5): 22–24
 //! - Moving spikes: 25–26
 //! - Speed-gate boxes (scroll 2↔4): 27–30
+//! - Combined (gravity + movers + speed gates): 31–34
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Kind {
@@ -52,7 +53,7 @@ pub struct Level {
     pub obstacles: &'static [Obstacle],
 }
 
-pub const LEVEL_COUNT: usize = 30;
+pub const LEVEL_COUNT: usize = 34;
 pub const BASE_Y: i32 = 34;
 /// Block / full-jump ledge height.
 pub const STEP: i32 = 8;
@@ -1255,6 +1256,148 @@ const O30: &[Obstacle] = &[
     Obstacle { x: 1140, kind: Kind::SpeedBlock },
 ];
 
+// --- Level 31: combo intro — 2 flips, light movers + speed gates ---
+const T31: &[TerrainKey] = &[
+    TerrainKey { x: 0, y: Y0 },
+    TerrainKey { x: 160, y: Y0 },
+    TerrainKey { x: 280, y: 28 },
+    TerrainKey { x: 400, y: Y0 },
+    TerrainKey { x: 560, y: Y1 },
+    TerrainKey { x: 720, y: Y0 },
+    TerrainKey { x: 880, y: 28 },
+    TerrainKey { x: 1040, y: Y0 },
+    TerrainKey { x: 1120, y: Y0 },
+];
+const O31: &[Obstacle] = &[
+    Obstacle { x: 70, kind: Kind::Spike },
+    Obstacle { x: 140, kind: Kind::SpeedBlock },
+    Obstacle { x: 220, kind: Kind::MovingSpike },
+    Obstacle { x: 320, kind: Kind::Spike },
+    Obstacle { x: 380, kind: Kind::SpeedBlock },
+    Obstacle { x: 480, kind: Kind::MovingSpike },
+    Obstacle { x: 540, kind: Kind::Spike },
+    Obstacle { x: 640, kind: Kind::SpeedBlock },
+    Obstacle { x: 760, kind: Kind::MovingSpike },
+    Obstacle { x: 840, kind: Kind::Spike },
+    Obstacle { x: 940, kind: Kind::SpeedBlock },
+    Obstacle { x: 1020, kind: Kind::Spike },
+    Obstacle { x: 1080, kind: Kind::MovingSpike },
+];
+
+// --- Level 32: longer, denser mix, still 2 flips ---
+const T32: &[TerrainKey] = &[
+    TerrainKey { x: 0, y: Y0 },
+    TerrainKey { x: 100, y: Y1 },
+    TerrainKey { x: 240, y: Y0 },
+    TerrainKey { x: 400, y: 28 },
+    TerrainKey { x: 560, y: Y1 },
+    TerrainKey { x: 720, y: Y2 },
+    TerrainKey { x: 880, y: Y1 },
+    TerrainKey { x: 1040, y: Y0 },
+    TerrainKey { x: 1160, y: 28 },
+    TerrainKey { x: 1240, y: Y0 },
+];
+const O32: &[Obstacle] = &[
+    Obstacle { x: 50, kind: Kind::Spike },
+    Obstacle { x: 110, kind: Kind::SpeedBlock },
+    Obstacle { x: 180, kind: Kind::MovingSpike },
+    Obstacle { x: 280, kind: Kind::Spike },
+    Obstacle { x: 340, kind: Kind::SpeedBlock },
+    Obstacle { x: 440, kind: Kind::MovingSpike },
+    Obstacle { x: 500, kind: Kind::Spike },
+    Obstacle { x: 580, kind: Kind::SpeedBlock },
+    Obstacle { x: 660, kind: Kind::MovingSpike },
+    Obstacle { x: 740, kind: Kind::Spike },
+    Obstacle { x: 800, kind: Kind::SpeedBlock },
+    Obstacle { x: 880, kind: Kind::MovingSpike },
+    Obstacle { x: 960, kind: Kind::Spike },
+    Obstacle { x: 1020, kind: Kind::SpeedBlock },
+    Obstacle { x: 1100, kind: Kind::MovingSpike },
+    Obstacle { x: 1180, kind: Kind::Spike },
+    Obstacle { x: 1220, kind: Kind::SpeedBlock },
+];
+
+// --- Level 33: 3 flips, stepped shelves, more gates/movers ---
+const T33: &[TerrainKey] = &[
+    TerrainKey { x: 0, y: Y0 },
+    TerrainKey { x: 120, y: Y1 },
+    TerrainKey { x: 260, y: Y0 },
+    TerrainKey { x: 400, y: Y1 },
+    TerrainKey { x: 540, y: Y2 },
+    TerrainKey { x: 700, y: Y1 },
+    TerrainKey { x: 860, y: Y0 },
+    TerrainKey { x: 1000, y: Y1 },
+    TerrainKey { x: 1140, y: Y2 },
+    TerrainKey { x: 1280, y: Y1 },
+    TerrainKey { x: 1360, y: Y0 },
+];
+const O33: &[Obstacle] = &[
+    Obstacle { x: 40, kind: Kind::Spike },
+    Obstacle { x: 90, kind: Kind::SpeedBlock },
+    Obstacle { x: 160, kind: Kind::MovingSpike },
+    Obstacle { x: 220, kind: Kind::Spike },
+    Obstacle { x: 300, kind: Kind::SpeedBlock },
+    Obstacle { x: 360, kind: Kind::MovingSpike },
+    Obstacle { x: 460, kind: Kind::Spike },
+    Obstacle { x: 520, kind: Kind::SpeedBlock },
+    Obstacle { x: 600, kind: Kind::MovingSpike },
+    Obstacle { x: 680, kind: Kind::Spike },
+    Obstacle { x: 760, kind: Kind::SpeedBlock },
+    Obstacle { x: 820, kind: Kind::MovingSpike },
+    Obstacle { x: 920, kind: Kind::Spike },
+    Obstacle { x: 980, kind: Kind::SpeedBlock },
+    Obstacle { x: 1060, kind: Kind::MovingSpike },
+    Obstacle { x: 1120, kind: Kind::Spike },
+    Obstacle { x: 1200, kind: Kind::SpeedBlock },
+    Obstacle { x: 1260, kind: Kind::MovingSpike },
+    Obstacle { x: 1320, kind: Kind::Spike },
+];
+
+// --- Level 34: longest combo finale — 3 flips, packed hazards ---
+const T34: &[TerrainKey] = &[
+    TerrainKey { x: 0, y: Y0 },
+    TerrainKey { x: 140, y: Y0 },
+    TerrainKey { x: 141, y: Y1 },
+    TerrainKey { x: 280, y: Y1 },
+    TerrainKey { x: 360, y: 28 },
+    TerrainKey { x: 500, y: Y0 },
+    TerrainKey { x: 501, y: Y1 },
+    TerrainKey { x: 640, y: Y1 },
+    TerrainKey { x: 641, y: Y2 },
+    TerrainKey { x: 800, y: Y2 },
+    TerrainKey { x: 900, y: 26 },
+    TerrainKey { x: 1040, y: Y1 },
+    TerrainKey { x: 1180, y: Y0 },
+    TerrainKey { x: 1181, y: Y1 },
+    TerrainKey { x: 1320, y: Y1 },
+    TerrainKey { x: 1321, y: Y2 },
+    TerrainKey { x: 1440, y: Y1 },
+    TerrainKey { x: 1500, y: Y0 },
+];
+const O34: &[Obstacle] = &[
+    Obstacle { x: 50, kind: Kind::Spike },
+    Obstacle { x: 100, kind: Kind::SpeedBlock },
+    Obstacle { x: 180, kind: Kind::MovingSpike },
+    Obstacle { x: 240, kind: Kind::Spike },
+    Obstacle { x: 320, kind: Kind::SpeedBlock },
+    Obstacle { x: 400, kind: Kind::MovingSpike },
+    Obstacle { x: 460, kind: Kind::Spike },
+    Obstacle { x: 540, kind: Kind::SpeedBlock },
+    Obstacle { x: 600, kind: Kind::MovingSpike },
+    Obstacle { x: 700, kind: Kind::Spike },
+    Obstacle { x: 760, kind: Kind::SpeedBlock },
+    Obstacle { x: 840, kind: Kind::MovingSpike },
+    Obstacle { x: 920, kind: Kind::SpeedBlock },
+    Obstacle { x: 1000, kind: Kind::Spike },
+    Obstacle { x: 1080, kind: Kind::MovingSpike },
+    Obstacle { x: 1140, kind: Kind::SpeedBlock },
+    Obstacle { x: 1220, kind: Kind::MovingSpike },
+    Obstacle { x: 1280, kind: Kind::Spike },
+    Obstacle { x: 1360, kind: Kind::SpeedBlock },
+    Obstacle { x: 1420, kind: Kind::MovingSpike },
+    Obstacle { x: 1470, kind: Kind::Spike },
+];
+
 pub static LEVELS: [Level; LEVEL_COUNT] = [
     Level {
         difficulty: 1,
@@ -1495,5 +1638,37 @@ pub static LEVELS: [Level; LEVEL_COUNT] = [
         gravity_flips: 0,
         terrain: T30,
         obstacles: O30,
+    },
+    Level {
+        difficulty: 31,
+        length: 1120,
+        mode: TerrainMode::Smooth,
+        gravity_flips: 2,
+        terrain: T31,
+        obstacles: O31,
+    },
+    Level {
+        difficulty: 32,
+        length: 1240,
+        mode: TerrainMode::Stepped,
+        gravity_flips: 2,
+        terrain: T32,
+        obstacles: O32,
+    },
+    Level {
+        difficulty: 33,
+        length: 1360,
+        mode: TerrainMode::Stepped,
+        gravity_flips: 3,
+        terrain: T33,
+        obstacles: O33,
+    },
+    Level {
+        difficulty: 34,
+        length: 1500,
+        mode: TerrainMode::Smooth,
+        gravity_flips: 3,
+        terrain: T34,
+        obstacles: O34,
     },
 ];

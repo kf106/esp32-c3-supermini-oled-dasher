@@ -16,9 +16,9 @@ MONITOR="${MONITOR:-0}"
 
 SEED_LEVEL=""
 if [[ $# -ge 1 ]]; then
-  if ! [[ "$1" =~ ^[0-9]+$ ]] || (( $1 < 1 || $1 > 30 )); then
+  if ! [[ "$1" =~ ^[0-9]+$ ]] || (( $1 < 1 || $1 > 34 )); then
     echo "usage: ./flash.sh [level]" >&2
-    echo "  level: 1..30 — seed save progress for that level in the flashed image" >&2
+    echo "  level: 1..34 — seed save progress for that level in the flashed image" >&2
     exit 1
   fi
   SEED_LEVEL="$1"
