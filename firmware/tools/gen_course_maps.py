@@ -1,0 +1,777 @@
+#!/usr/bin/env python3
+"""Render course-map PNGs for all levels into assets/courses/.
+
+Data mirrors firmware/src/level.rs (terrain keys + obstacles + mode).
+"""
+
+from __future__ import annotations
+
+import pathlib
+
+from PIL import Image, ImageDraw
+
+ROOT = pathlib.Path(__file__).resolve().parents[2]
+OUT = ROOT / "assets" / "courses"
+
+SPIKE_W, SPIKE_H = 6, 6
+BLOCK_W, BLOCK_H = 6, 8
+CUBE = 5
+PLAYER_SX = 14
+VIEW_H = 40
+BASE_Y = 34
+
+# (difficulty, length, mode, terrain[(x,y),...], obstacles[(x, kind),...])
+LEVELS = [
+    (
+        1,
+        560,
+        "smooth",
+        [
+            (0, 34),
+            (560, 34),
+        ],
+        [
+            (100, "spike"),
+            (180, "spike"),
+            (260, "block"),
+            (340, "spike"),
+            (420, "spike"),
+            (500, "block"),
+        ],
+    ),
+    (
+        2,
+        600,
+        "smooth",
+        [
+            (0, 34),
+            (600, 34),
+        ],
+        [
+            (90, "spike"),
+            (150, "spike"),
+            (220, "block"),
+            (280, "spike"),
+            (360, "spike"),
+            (400, "spike"),
+            (480, "block"),
+            (540, "spike"),
+        ],
+    ),
+    (
+        3,
+        720,
+        "stepped",
+        [
+            (0, 34),
+            (160, 26),
+            (280, 34),
+            (400, 26),
+            (520, 18),
+            (640, 26),
+            (720, 34),
+        ],
+        [
+            (80, "spike"),
+            (140, "spike"),
+            (200, "block"),
+            (250, "spike"),
+            (310, "spike"),
+            (380, "block"),
+            (430, "spike"),
+            (470, "spike"),
+            (560, "block"),
+            (620, "spike"),
+            (660, "spike"),
+        ],
+    ),
+    (
+        4,
+        720,
+        "smooth",
+        [
+            (0, 34),
+            (60, 34),
+            (140, 28),
+            (220, 34),
+            (320, 30),
+            (400, 26),
+            (500, 32),
+            (600, 28),
+            (720, 34),
+        ],
+        [
+            (80, "spike"),
+            (120, "spike"),
+            (170, "block"),
+            (210, "spike"),
+            (250, "spike"),
+            (300, "block"),
+            (340, "spike"),
+            (360, "spike"),
+            (420, "block"),
+            (455, "spike"),
+            (490, "spike"),
+            (520, "block"),
+            (545, "spike"),
+            (570, "spike"),
+            (595, "spike"),
+            (640, "block"),
+            (670, "spike"),
+            (690, "spike"),
+        ],
+    ),
+    (
+        5,
+        760,
+        "stepped",
+        [
+            (0, 34),
+            (120, 26),
+            (220, 34),
+            (320, 26),
+            (420, 18),
+            (540, 26),
+            (640, 34),
+            (760, 34),
+        ],
+        [
+            (70, "spike"),
+            (110, "spike"),
+            (150, "block"),
+            (200, "spike"),
+            (230, "spike"),
+            (280, "block"),
+            (330, "spike"),
+            (360, "spike"),
+            (390, "spike"),
+            (450, "block"),
+            (500, "spike"),
+            (530, "spike"),
+            (580, "block"),
+            (620, "spike"),
+            (650, "spike"),
+            (690, "spike"),
+            (720, "block"),
+        ],
+    ),
+    (
+        6,
+        800,
+        "smooth",
+        [
+            (0, 34),
+            (60, 26),
+            (140, 34),
+            (200, 22),
+            (300, 30),
+            (380, 24),
+            (480, 34),
+            (560, 26),
+            (680, 32),
+            (800, 34),
+        ],
+        [
+            (50, "spike"),
+            (90, "spike"),
+            (130, "block"),
+            (180, "spike"),
+            (210, "spike"),
+            (250, "spike"),
+            (290, "block"),
+            (340, "spike"),
+            (370, "spike"),
+            (420, "block"),
+            (460, "spike"),
+            (490, "spike"),
+            (520, "spike"),
+            (570, "block"),
+            (610, "spike"),
+            (640, "spike"),
+            (680, "spike"),
+            (720, "block"),
+            (760, "spike"),
+        ],
+    ),
+    (
+        7,
+        840,
+        "stepped",
+        [
+            (0, 34),
+            (100, 26),
+            (180, 18),
+            (280, 26),
+            (380, 34),
+            (480, 26),
+            (560, 18),
+            (660, 26),
+            (760, 34),
+            (840, 34),
+        ],
+        [
+            (60, "spike"),
+            (95, "spike"),
+            (130, "block"),
+            (175, "spike"),
+            (205, "spike"),
+            (235, "spike"),
+            (280, "block"),
+            (320, "spike"),
+            (350, "spike"),
+            (390, "block"),
+            (430, "spike"),
+            (460, "spike"),
+            (490, "spike"),
+            (535, "block"),
+            (575, "spike"),
+            (605, "spike"),
+            (635, "spike"),
+            (680, "block"),
+            (720, "spike"),
+            (750, "spike"),
+            (780, "spike"),
+            (810, "block"),
+        ],
+    ),
+    (
+        8,
+        900,
+        "smooth",
+        [
+            (0, 34),
+            (60, 34),
+            (62, 26),
+            (140, 26),
+            (200, 30),
+            (280, 34),
+            (340, 34),
+            (342, 26),
+            (400, 26),
+            (402, 18),
+            (480, 18),
+            (560, 26),
+            (640, 32),
+            (700, 34),
+            (702, 26),
+            (780, 26),
+            (820, 28),
+            (900, 34),
+        ],
+        [
+            (40, "spike"),
+            (70, "spike"),
+            (110, "block"),
+            (150, "spike"),
+            (175, "spike"),
+            (200, "spike"),
+            (240, "block"),
+            (280, "spike"),
+            (305, "spike"),
+            (330, "spike"),
+            (370, "block"),
+            (410, "spike"),
+            (435, "spike"),
+            (460, "spike"),
+            (500, "block"),
+            (540, "spike"),
+            (565, "spike"),
+            (590, "spike"),
+            (630, "block"),
+            (670, "spike"),
+            (695, "spike"),
+            (720, "spike"),
+            (760, "block"),
+            (800, "spike"),
+            (825, "spike"),
+            (850, "spike"),
+            (880, "block"),
+        ],
+    ),
+    (
+        9,
+        920,
+        "smooth",
+        [
+            (0, 34),
+            (920, 34),
+        ],
+        [
+            (70, "spike"),
+            (100, "spike"),
+            (140, "block"),
+            (180, "spike"),
+            (210, "spike"),
+            (240, "spike"),
+            (280, "block"),
+            (320, "spike"),
+            (350, "spike"),
+            (390, "block"),
+            (430, "spike"),
+            (455, "spike"),
+            (480, "spike"),
+            (520, "block"),
+            (560, "spike"),
+            (590, "spike"),
+            (620, "spike"),
+            (660, "block"),
+            (700, "spike"),
+            (730, "spike"),
+            (770, "block"),
+            (810, "spike"),
+            (840, "spike"),
+            (870, "spike"),
+            (900, "block"),
+        ],
+    ),
+    (
+        10,
+        960,
+        "smooth",
+        [
+            (0, 34),
+            (80, 28),
+            (160, 34),
+            (240, 24),
+            (340, 32),
+            (420, 22),
+            (520, 30),
+            (600, 26),
+            (700, 34),
+            (780, 24),
+            (880, 30),
+            (960, 34),
+        ],
+        [
+            (50, "spike"),
+            (90, "spike"),
+            (130, "block"),
+            (170, "spike"),
+            (210, "spike"),
+            (250, "spike"),
+            (290, "block"),
+            (330, "spike"),
+            (370, "spike"),
+            (410, "spike"),
+            (450, "block"),
+            (490, "spike"),
+            (530, "spike"),
+            (570, "spike"),
+            (610, "block"),
+            (650, "spike"),
+            (690, "spike"),
+            (730, "spike"),
+            (770, "block"),
+            (810, "spike"),
+            (850, "spike"),
+            (890, "spike"),
+            (930, "block"),
+        ],
+    ),
+    (
+        11,
+        1040,
+        "stepped",
+        [
+            (0, 34),
+            (100, 26),
+            (180, 18),
+            (280, 26),
+            (360, 34),
+            (440, 26),
+            (520, 18),
+            (620, 26),
+            (700, 34),
+            (780, 26),
+            (860, 18),
+            (960, 26),
+            (1040, 34),
+        ],
+        [
+            (55, "spike"),
+            (90, "spike"),
+            (130, "block"),
+            (165, "spike"),
+            (200, "spike"),
+            (240, "block"),
+            (300, "spike"),
+            (335, "spike"),
+            (385, "block"),
+            (420, "spike"),
+            (455, "spike"),
+            (490, "spike"),
+            (545, "block"),
+            (585, "spike"),
+            (620, "spike"),
+            (660, "block"),
+            (720, "spike"),
+            (755, "spike"),
+            (800, "block"),
+            (840, "spike"),
+            (875, "spike"),
+            (910, "spike"),
+            (960, "block"),
+            (1000, "spike"),
+        ],
+    ),
+    (
+        12,
+        1000,
+        "stepped",
+        [
+            (0, 34),
+            (140, 26),
+            (300, 26),
+            (301, 34),
+            (420, 34),
+            (421, 26),
+            (560, 26),
+            (561, 18),
+            (720, 18),
+            (721, 26),
+            (860, 26),
+            (861, 34),
+            (1000, 34),
+        ],
+        [
+            (60, "spike"),
+            (100, "spike"),
+            (170, "block"),
+            (220, "spike"),
+            (250, "spike"),
+            (280, "spike"),
+            (340, "block"),
+            (380, "spike"),
+            (410, "spike"),
+            (460, "block"),
+            (500, "spike"),
+            (530, "spike"),
+            (590, "block"),
+            (640, "spike"),
+            (670, "spike"),
+            (700, "spike"),
+            (760, "block"),
+            (800, "spike"),
+            (830, "spike"),
+            (890, "block"),
+            (930, "spike"),
+            (960, "spike"),
+        ],
+    ),
+    (
+        13,
+        1080,
+        "smooth",
+        [
+            (0, 34),
+            (50, 34),
+            (52, 26),
+            (110, 26),
+            (160, 30),
+            (220, 34),
+            (260, 34),
+            (262, 26),
+            (310, 26),
+            (312, 18),
+            (400, 18),
+            (460, 24),
+            (540, 32),
+            (580, 34),
+            (582, 26),
+            (640, 26),
+            (642, 18),
+            (720, 18),
+            (780, 28),
+            (860, 26),
+            (862, 34),
+            (940, 34),
+            (942, 26),
+            (1020, 26),
+            (1080, 34),
+        ],
+        [
+            (30, "spike"),
+            (70, "spike"),
+            (100, "block"),
+            (140, "spike"),
+            (180, "spike"),
+            (230, "block"),
+            (280, "spike"),
+            (330, "spike"),
+            (360, "spike"),
+            (420, "block"),
+            (480, "spike"),
+            (510, "spike"),
+            (550, "spike"),
+            (600, "block"),
+            (660, "spike"),
+            (690, "spike"),
+            (740, "block"),
+            (800, "spike"),
+            (830, "spike"),
+            (880, "spike"),
+            (920, "block"),
+            (970, "spike"),
+            (1000, "spike"),
+            (1040, "block"),
+        ],
+    ),
+    (
+        14,
+        1100,
+        "smooth",
+        [
+            (0, 34),
+            (70, 26),
+            (140, 34),
+            (210, 20),
+            (300, 32),
+            (380, 22),
+            (460, 34),
+            (540, 24),
+            (620, 18),
+            (700, 30),
+            (780, 22),
+            (860, 34),
+            (940, 26),
+            (1020, 34),
+            (1100, 34),
+        ],
+        [
+            (40, "spike"),
+            (80, "spike"),
+            (120, "block"),
+            (170, "spike"),
+            (200, "spike"),
+            (240, "spike"),
+            (280, "block"),
+            (330, "spike"),
+            (360, "spike"),
+            (400, "spike"),
+            (440, "block"),
+            (490, "spike"),
+            (520, "spike"),
+            (560, "spike"),
+            (600, "block"),
+            (640, "spike"),
+            (670, "spike"),
+            (710, "spike"),
+            (750, "block"),
+            (800, "spike"),
+            (830, "spike"),
+            (870, "spike"),
+            (910, "block"),
+            (960, "spike"),
+            (990, "spike"),
+            (1030, "spike"),
+            (1060, "block"),
+        ],
+    ),
+    (
+        15,
+        1120,
+        "stepped",
+        [
+            (0, 34),
+            (80, 26),
+            (140, 18),
+            (200, 26),
+            (260, 34),
+            (320, 26),
+            (380, 18),
+            (440, 26),
+            (500, 34),
+            (560, 26),
+            (620, 18),
+            (700, 26),
+            (760, 34),
+            (820, 26),
+            (880, 18),
+            (960, 26),
+            (1040, 34),
+            (1120, 34),
+        ],
+        [
+            (45, "spike"),
+            (70, "spike"),
+            (105, "block"),
+            (155, "spike"),
+            (185, "spike"),
+            (225, "block"),
+            (280, "spike"),
+            (310, "spike"),
+            (350, "block"),
+            (400, "spike"),
+            (430, "spike"),
+            (470, "block"),
+            (525, "spike"),
+            (555, "spike"),
+            (590, "block"),
+            (645, "spike"),
+            (675, "spike"),
+            (720, "block"),
+            (780, "spike"),
+            (810, "spike"),
+            (850, "block"),
+            (905, "spike"),
+            (935, "spike"),
+            (980, "block"),
+            (1020, "spike"),
+            (1050, "spike"),
+            (1080, "spike"),
+        ],
+    ),
+    (
+        16,
+        1240,
+        "smooth",
+        [
+            (0, 34),
+            (200, 34),
+            (201, 26),
+            (280, 26),
+            (281, 18),
+            (360, 18),
+            (361, 26),
+            (440, 26),
+            (441, 34),
+            (520, 28),
+            (600, 22),
+            (680, 32),
+            (760, 24),
+            (820, 34),
+            (822, 26),
+            (900, 26),
+            (902, 18),
+            (980, 18),
+            (1040, 28),
+            (1100, 34),
+            (1102, 26),
+            (1180, 26),
+            (1240, 34),
+        ],
+        [
+            (50, "spike"),
+            (90, "spike"),
+            (130, "block"),
+            (170, "spike"),
+            (230, "spike"),
+            (260, "spike"),
+            (300, "block"),
+            (340, "spike"),
+            (390, "spike"),
+            (420, "block"),
+            (480, "spike"),
+            (540, "spike"),
+            (570, "spike"),
+            (620, "block"),
+            (660, "spike"),
+            (700, "spike"),
+            (740, "spike"),
+            (790, "block"),
+            (840, "spike"),
+            (870, "spike"),
+            (920, "block"),
+            (960, "spike"),
+            (1000, "spike"),
+            (1060, "block"),
+            (1120, "spike"),
+            (1150, "spike"),
+            (1190, "spike"),
+            (1220, "block"),
+        ],
+    ),
+]
+
+
+def ground_at(terrain: list[tuple[int, int]], x: int, mode: str) -> int:
+    if not terrain:
+        return BASE_Y
+    if mode == "stepped":
+        y = terrain[0][1]
+        for kx, ky in terrain:
+            if x >= kx:
+                y = ky
+            else:
+                break
+        return y
+    if x <= terrain[0][0]:
+        return terrain[0][1]
+    for i in range(len(terrain) - 1):
+        ax, ay = terrain[i]
+        bx, by = terrain[i + 1]
+        if x <= bx:
+            dx = bx - ax
+            if dx <= 0:
+                return by
+            t = x - ax
+            return ay + (by - ay) * t // dx
+    return terrain[-1][1]
+
+
+def render_level(diff: int, length: int, mode: str, terrain, obstacles) -> Image.Image:
+    sx, sy = 3, 4
+    margin_l, margin_t, margin_b = 28, 36, 28
+    play_h = VIEW_H * sy
+    w = margin_l + length * sx + 40
+    h = margin_t + play_h + margin_b
+    img = Image.new("RGB", (w, h), (18, 18, 22))
+    d = ImageDraw.Draw(img)
+
+    def wx(x: int) -> int:
+        return margin_l + x * sx
+
+    def wy(y: int) -> int:
+        return margin_t + y * sy
+
+    d.text((margin_l, 8), f"SQUARE DASH — Level {diff}  ({mode})", fill=(230, 230, 235))
+
+    for x in range(0, length + 1, 40):
+        px = wx(x)
+        d.line([px, margin_t, px, wy(VIEW_H)], fill=(32, 32, 40))
+        d.text((px + 2, margin_t - 14), str(x), fill=(110, 110, 120))
+
+    for x in range(length + 1):
+        gy = ground_at(terrain, x, mode)
+        d.rectangle([wx(x), wy(gy), wx(x + 1), wy(VIEW_H)], fill=(40, 42, 50))
+
+    pts = [(wx(x), wy(ground_at(terrain, x, mode))) for x in range(0, length + 1, 2)]
+    if len(pts) >= 2:
+        d.line(pts, fill=(200, 205, 215), width=2)
+
+    g0 = ground_at(terrain, PLAYER_SX, mode)
+    cx, cy = wx(PLAYER_SX), wy(g0 - CUBE)
+    d.rectangle([cx, cy, cx + CUBE * sx - 1, cy + CUBE * sy - 1], fill=(120, 220, 140), outline=(200, 255, 210))
+    d.text((cx, cy - 12), "START", fill=(120, 220, 140))
+
+    for x, kind in obstacles:
+        mid = x + (SPIKE_W if kind == "spike" else BLOCK_W) // 2
+        floor = ground_at(terrain, mid, mode)
+        px = wx(x)
+        if kind == "spike":
+            d.polygon([
+                (px + SPIKE_W * sx // 2, wy(floor - SPIKE_H)),
+                (px, wy(floor)),
+                (px + SPIKE_W * sx, wy(floor)),
+            ], fill=(230, 80, 80))
+        else:
+            d.rectangle([px, wy(floor - BLOCK_H), px + BLOCK_W * sx - 1, wy(floor) - 1], fill=(90, 140, 255), outline=(180, 200, 255))
+
+    fx = wx(length)
+    d.line([fx, margin_t, fx, wy(VIEW_H)], fill=(255, 220, 80), width=3)
+    d.text((fx - 36, margin_t - 14), f"END {length}", fill=(255, 220, 80))
+    d.text((margin_l, h - 20), "green=start   red=spike   blue=block   yellow=finish   grey=terrain", fill=(150, 150, 160))
+    return img
+
+
+def main() -> None:
+    OUT.mkdir(parents=True, exist_ok=True)
+    for diff, length, mode, terrain, obstacles in LEVELS:
+        img = render_level(diff, length, mode, terrain, obstacles)
+        path = OUT / f"level-{diff:02d}.png"
+        img.save(path)
+        print(f"wrote {path} ({img.size[0]}x{img.size[1]})")
+
+
+if __name__ == "__main__":
+    main()

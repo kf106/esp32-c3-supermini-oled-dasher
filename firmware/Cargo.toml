@@ -1,0 +1,30 @@
+[package]
+name = "oled-dash"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Geometry Dash–style one-button runner on ESP32-C3 Supermini OLED (72×40)"
+
+[dependencies]
+embedded-hal = "1.0.0"
+embedded-io = "0.6.1"
+esp-backtrace = { version = "0.14.2", features = [
+    "esp32c3",
+    "exception-handler",
+    "panic-handler",
+    "println",
+] }
+esp-hal = { version = "0.21.0", features = ["esp32c3"] }
+esp-println = { version = "0.12.0", features = ["esp32c3"] }
+
+[profile.dev]
+opt-level = "s"
+
+[profile.release]
+codegen-units = 1
+debug = 2
+debug-assertions = false
+incremental = false
+lto = false
+opt-level = "s"
+overflow-checks = false
