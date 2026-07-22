@@ -1,0 +1,13 @@
+{
+  "name": "OLED Dash",
+  "version": "VERSION_PLACEHOLDER",
+  "new_install_prompt_erase": true,
+  "builds": [
+    {
+      "chipFamily": "ESP32-C3",
+      "parts": [
+        { "path": "firmware.bin", "offset": 0 }
+      ]
+    }
+  ]
+}

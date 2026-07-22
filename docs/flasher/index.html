@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Flash OLED Dash firmware</title>
+  <style>
+    :root {
+      --esp-tools-button-color: #1e5aa8;
+      --esp-tools-button-text-color: #ffffff;
+      --esp-tools-button-border-radius: 8px;
+    }
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      max-width: 42rem;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      line-height: 1.5;
+      color: #111;
+    }
+    h1 { font-size: 1.5rem; }
+    ol { padding-left: 1.25rem; }
+    .note {
+      background: #f4f4f4;
+      border-left: 4px solid #1e5aa8;
+      padding: 0.75rem 1rem;
+      margin: 1.25rem 0;
+    }
+  </style>
+  <script
+    type="module"
+    src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"
+  ></script>
+</head>
+<body>
+  <h1>ESP32-C3 Supermini OLED — Square Dash</h1>
+  <p>
+    Install the latest firmware in your browser. You need a
+    <strong>USB data cable</strong>, <strong>Google Chrome</strong> or
+    <strong>Microsoft Edge</strong> on a computer (not phone or tablet), and an
+    ESP32-C3 Supermini OLED board.
+  </p>
+  <ol>
+    <li>Plug the board into your computer with USB.</li>
+    <li>Click <strong>Install firmware</strong> below and allow access to the serial port when asked.</li>
+    <li>Pick the board’s USB serial port (often <code>USB JTAG/serial</code> or <code>/dev/ttyACM0</code> on Ubuntu).</li>
+    <li>Wait until flashing finishes. You should see the <strong>SQUARE DASH</strong> splash, then the game.</li>
+  </ol>
+  <esp-web-install-button manifest="manifest.json">
+    <button slot="activate" style="font-size: 1rem; padding: 0.6rem 1.2rem; cursor: pointer;">
+      Install firmware
+    </button>
+    <span slot="unsupported">
+      This installer needs Chrome or Edge on a desktop/laptop (Web Serial is not available here).
+    </span>
+    <span slot="not-allowed">
+      Open this page over HTTPS (for example via GitHub Pages), not as a local file.
+    </span>
+  </esp-web-install-button>
+  <div class="note">
+    <strong>Tip:</strong> Hold <strong>BOOT</strong> for 2 seconds during the splash to wipe saved progress.
+    To put the chip into download mode manually, hold <strong>BOOT</strong> while pressing <strong>RESET</strong>.
+  </div>
+  <p>
+    <a href="https://github.com/kf106/esp32-c3-supermini-oled-dasher">Source and build instructions</a>
+  </p>
+</body>
+</html>

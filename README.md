@@ -10,6 +10,12 @@ Obviously, the best game to implement is ... a Geometry Dash-style **one-button*
 
 Tap the **BOOT** button (GPIO9) to jump. Die → tap to retry. Finish a level → tap to play the next.
 
+## Install firmware in your browser
+
+**[Install OLED Dash firmware](https://kf106.github.io/esp32-c3-supermini-oled-dasher/)**
+
+Use **Chrome** or **Edge** on a computer. Plug the board in with USB, open the link, click **Install firmware**, pick the serial port, and wait. On Ubuntu the port is usually **`/dev/ttyACM0`**.
+
 ## Board
 
 | Function | GPIO | Notes |
@@ -62,6 +68,8 @@ python3 firmware/tools/gen_course_maps.py
 
 ## Build and flash
 
+From a terminal (Rust + `espflash`):
+
 ```bash
 cd firmware
 cargo build --release
@@ -75,9 +83,12 @@ PORT=/dev/ttyACM0 ./flash.sh
 MONITOR=1 ./flash.sh
 ```
 
+Or use the [browser installer](https://kf106.github.io/esp32-c3-supermini-oled-dasher/) above (no local toolchain).
+
 ## Layout
 
 ```
+docs/flasher/          # browser installer (GitHub Pages)
 firmware/src/
   main.rs      # OLED + BOOT + tick loop
   ssd1306.rs   # display driver
@@ -87,6 +98,7 @@ firmware/src/
   level.rs     # 16 courses + terrain
   game.rs      # physics + collisions
   save.rs      # flash-backed level progress
+  led.rs       # blue LED celebrate
 ```
 
 ## License

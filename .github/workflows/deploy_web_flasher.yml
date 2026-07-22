@@ -1,0 +1,143 @@
+name: Deploy web flasher (GitHub Pages)
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    env:
+      PAGES_ARTIFACT_NAME: oled-dash-web-flasher
+    defaults:
+      run:
+        working-directory: firmware
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version from tag or build
+        id: version
+        working-directory: .
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            RAW="${{ github.event.release.tag_name }}"
+          else
+            RAW=$(git describe --tags --abbrev=0 2>/dev/null || echo "0.0.0-dev")
+          fi
+          VERSION=$(echo "$RAW" | sed -E 's/^v?([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
+          if [ "$VERSION" = "$RAW" ] && [ "${{ github.event_name }}" != "release" ]; then
+            VERSION="${RAW}"
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: riscv32imc-unknown-none-elf
+          components: rust-src
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: firmware
+
+      - name: Install espflash
+        run: cargo install espflash --locked
+
+      - name: Build firmware
+        run: cargo build --release
+
+      - name: Build merged image (same path as flash.sh)
+        run: |
+          set -euo pipefail
+          BIN="target/riscv32imc-unknown-none-elf/release/oled-dash"
+          IMG="target/oled-dash-merged.bin"
+          espflash save-image --chip esp32c3 --merge --ignore-app-descriptor "$BIN" "$IMG" >/dev/null
+          python3 - "$IMG" <<'PY'
+          import hashlib
+          import struct
+          import sys
+
+          path = sys.argv[1]
+          APP_BASE = 0x10000
+          APP_DESC_OFFSET = APP_BASE + 0x20 + 0x20
+
+          def cstr(text: str, n: int) -> bytes:
+              b = text.encode("ascii", "ignore")[: n - 1]
+              return b + b"\x00" * (n - len(b))
+
+          with open(path, "rb") as f:
+              data = bytearray(f.read())
+
+          desc = bytearray(256)
+          struct.pack_into("<I", desc, 0, 0xABCD5432)
+          struct.pack_into("<I", desc, 4, 0)
+          desc[16:48] = cstr("0.1.2", 32)
+          desc[48:80] = cstr("oled-dash", 32)
+          desc[80:96] = cstr("00:00:00", 16)
+          desc[96:112] = cstr("1970-01-01", 16)
+          desc[112:144] = cstr("esp-hal", 32)
+          struct.pack_into("<H", desc, 176, 0)
+          struct.pack_into("<H", desc, 178, 0xFFFF)
+          desc[180] = 0
+          data[APP_DESC_OFFSET:APP_DESC_OFFSET + 256] = desc
+
+          base = APP_BASE
+          segment_count = data[base + 1]
+          append_digest = data[base + 23]
+          pos = base + 24
+          checksum = 0xEF
+
+          for _ in range(segment_count):
+              seg_len = struct.unpack_from("<I", data, pos + 4)[0]
+              pos += 8
+              for b in data[pos:pos + seg_len]:
+                  checksum ^= b
+              pos += seg_len
+
+          pad = (15 - ((pos - base) % 16)) % 16
+          pos += pad
+          data[pos] = checksum
+          end = pos + 1
+
+          if append_digest:
+              digest = hashlib.sha256(data[base:end]).digest()
+              data[end:end + 32] = digest
+
+          with open(path, "wb") as f:
+              f.write(data)
+          PY
+
+      - name: Assemble flasher site
+        working-directory: .
+        run: |
+          SITE=flasher-site
+          rm -rf "$SITE"
+          mkdir -p "$SITE"
+          cp docs/flasher/index.html "$SITE/"
+          cp firmware/target/oled-dash-merged.bin "$SITE/firmware.bin"
+          sed "s/VERSION_PLACEHOLDER/${{ steps.version.outputs.VERSION }}/" \
+            docs/flasher/manifest.template.json > "$SITE/manifest.json"
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          name: ${{ env.PAGES_ARTIFACT_NAME }}
+          path: flasher-site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+        with:
+          artifact_name: ${{ env.PAGES_ARTIFACT_NAME }}
