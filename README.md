@@ -6,7 +6,7 @@ However, the tiny 72x40 pixel screen that is only 0.42 inches across the diagona
 
 Obviously, the best game to implement is ... a Geometry Dash-style **one-button** cube runner.
 
-![`assets/demo.gif`](assets/splash-72x40.png)
+![`assets/demo.gif`](assets/demo.gif)
 
 Tap the **BOOT** button (GPIO9) to jump. Die → tap to retry. Finish a level → tap to play the next.
 
