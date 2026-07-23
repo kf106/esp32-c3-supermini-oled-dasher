@@ -30,9 +30,8 @@ Use **Chrome** or **Edge** on a computer. Plug the board in with USB, open the l
 
 - **34 levels**, HUD shows **level number** (1–34) on the left, progress % on the right
 - Terrain variety: flat (1–2, 9), 8px steps (3, 5, 7, 11–12, 15), hills (4, 6, 10, 14), mixed jumps + gradients (8, 13, 16), **gravity flips** (17–24), **moving spikes** (25–26), **speed-gate boxes** (27–30), **combo** gravity+movers+speed (31–34)
-- Your original course is **difficulty 4**
 - Completing a level **unlocks the next** and saves to flash — reset or power-cycle resumes at that level
-- Clearing all twenty-one shows **SQUARE DASH COMPLETE!** — hold BOOT 2s on that screen (or the boot splash) to wipe back to level 1
+- Clearing all 34 levels shows **SQUARE DASH COMPLETE!** — hold BOOT 2s on that screen (or the boot splash) to wipe back to level 1
 - **SQUARE DASH** splash for **5 seconds** on boot — **hold BOOT for 2 seconds** to wipe progress (`ERASED`)
 
 ## Build and flash
