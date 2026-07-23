@@ -960,7 +960,6 @@ LEVELS = [
             (510, "spike"),
             (590, "block"),
             (670, "spike"),
-            (750, "spike"),
             (840, "block"),
             (940, "spike"),
             (1040, "spike"),
@@ -1012,6 +1011,359 @@ LEVELS = [
             (1340, "spike"),
         ],
     ),
+    (
+        25,
+        960,
+        "smooth",
+        [
+            (0, 34),
+            (200, 34),
+            (280, 28),
+            (400, 34),
+            (520, 26),
+            (640, 34),
+            (760, 28),
+            (880, 34),
+            (960, 34),
+        ],
+        [
+            (60, "spike"),
+            (120, "mspike"),
+            (180, "block"),
+            (240, "spike"),
+            (320, "mspike"),
+            (380, "spike"),
+            (440, "block"),
+            (500, "mspike"),
+            (560, "spike"),
+            (620, "mspike"),
+            (700, "block"),
+            (740, "spike"),
+            (800, "mspike"),
+            (860, "spike"),
+            (920, "mspike"),
+        ],
+    ),
+    (
+        26,
+        1080,
+        "stepped",
+        [
+            (0, 34),
+            (120, 26),
+            (280, 34),
+            (400, 26),
+            (520, 18),
+            (640, 26),
+            (760, 34),
+            (880, 26),
+            (1000, 34),
+            (1080, 34),
+        ],
+        [
+            (50, "spike"),
+            (90, "mspike"),
+            (160, "block"),
+            (200, "mspike"),
+            (250, "spike"),
+            (320, "mspike"),
+            (370, "spike"),
+            (440, "mspike"),
+            (480, "block"),
+            (540, "mspike"),
+            (580, "spike"),
+            (650, "mspike"),
+            (700, "spike"),
+            (780, "mspike"),
+            (820, "block"),
+            (880, "mspike"),
+            (940, "spike"),
+            (1000, "mspike"),
+            (1040, "spike"),
+        ],
+    ),
+    (
+        27,
+        960,
+        "smooth",
+        [
+            (0, 34),
+            (960, 34),
+        ],
+        [
+            (80, "spike"),
+            (160, "sblock"),
+            (240, "spike"),
+            (320, "spike"),
+            (400, "sblock"),
+            (500, "spike"),
+            (580, "spike"),
+            (680, "sblock"),
+            (780, "spike"),
+            (860, "spike"),
+            (920, "block"),
+        ],
+    ),
+    (
+        28,
+        1040,
+        "smooth",
+        [
+            (0, 34),
+            (120, 28),
+            (240, 34),
+            (400, 26),
+            (560, 34),
+            (720, 28),
+            (880, 34),
+            (1040, 34),
+        ],
+        [
+            (60, "spike"),
+            (140, "sblock"),
+            (200, "spike"),
+            (280, "sblock"),
+            (360, "spike"),
+            (440, "sblock"),
+            (520, "spike"),
+            (600, "spike"),
+            (680, "sblock"),
+            (760, "spike"),
+            (840, "sblock"),
+            (920, "spike"),
+            (980, "block"),
+        ],
+    ),
+    (
+        29,
+        1100,
+        "stepped",
+        [
+            (0, 34),
+            (140, 26),
+            (300, 34),
+            (460, 26),
+            (620, 18),
+            (780, 26),
+            (940, 34),
+            (1100, 34),
+        ],
+        [
+            (50, "spike"),
+            (100, "sblock"),
+            (180, "spike"),
+            (240, "sblock"),
+            (340, "spike"),
+            (400, "sblock"),
+            (500, "spike"),
+            (560, "sblock"),
+            (660, "spike"),
+            (720, "sblock"),
+            (800, "spike"),
+            (860, "sblock"),
+            (940, "spike"),
+            (1000, "sblock"),
+            (1060, "spike"),
+        ],
+    ),
+    (
+        30,
+        1200,
+        "smooth",
+        [
+            (0, 34),
+            (100, 34),
+            (101, 26),
+            (220, 26),
+            (300, 28),
+            (420, 34),
+            (421, 26),
+            (540, 26),
+            (541, 18),
+            (680, 18),
+            (760, 26),
+            (880, 26),
+            (1000, 34),
+            (1001, 26),
+            (1120, 26),
+            (1200, 34),
+        ],
+        [
+            (40, "spike"),
+            (80, "sblock"),
+            (140, "spike"),
+            (180, "sblock"),
+            (260, "sblock"),
+            (340, "spike"),
+            (380, "sblock"),
+            (460, "spike"),
+            (500, "sblock"),
+            (580, "sblock"),
+            (640, "spike"),
+            (720, "sblock"),
+            (800, "spike"),
+            (840, "sblock"),
+            (920, "sblock"),
+            (980, "spike"),
+            (1040, "sblock"),
+            (1100, "spike"),
+            (1140, "sblock"),
+        ],
+    ),
+    (
+        31,
+        1120,
+        "smooth",
+        [
+            (0, 34),
+            (160, 34),
+            (280, 28),
+            (400, 34),
+            (560, 26),
+            (720, 34),
+            (880, 28),
+            (1040, 34),
+            (1120, 34),
+        ],
+        [
+            (70, "spike"),
+            (140, "sblock"),
+            (220, "mspike"),
+            (320, "spike"),
+            (380, "sblock"),
+            (480, "mspike"),
+            (540, "spike"),
+            (640, "sblock"),
+            (760, "mspike"),
+            (840, "spike"),
+            (940, "sblock"),
+            (1020, "spike"),
+            (1080, "mspike"),
+        ],
+    ),
+    (
+        32,
+        1240,
+        "stepped",
+        [
+            (0, 34),
+            (100, 26),
+            (240, 34),
+            (400, 28),
+            (560, 26),
+            (720, 18),
+            (880, 26),
+            (1040, 34),
+            (1160, 28),
+            (1240, 34),
+        ],
+        [
+            (50, "spike"),
+            (110, "sblock"),
+            (180, "mspike"),
+            (280, "spike"),
+            (340, "sblock"),
+            (440, "mspike"),
+            (500, "spike"),
+            (580, "sblock"),
+            (660, "mspike"),
+            (740, "spike"),
+            (800, "sblock"),
+            (880, "mspike"),
+            (960, "spike"),
+            (1020, "sblock"),
+            (1100, "mspike"),
+            (1180, "spike"),
+            (1220, "sblock"),
+        ],
+    ),
+    (
+        33,
+        1360,
+        "stepped",
+        [
+            (0, 34),
+            (120, 26),
+            (260, 34),
+            (400, 26),
+            (540, 18),
+            (700, 26),
+            (860, 34),
+            (1000, 26),
+            (1140, 18),
+            (1280, 26),
+            (1360, 34),
+        ],
+        [
+            (40, "spike"),
+            (90, "sblock"),
+            (160, "mspike"),
+            (220, "spike"),
+            (300, "sblock"),
+            (360, "mspike"),
+            (460, "spike"),
+            (520, "sblock"),
+            (600, "mspike"),
+            (680, "spike"),
+            (760, "sblock"),
+            (820, "mspike"),
+            (920, "spike"),
+            (980, "sblock"),
+            (1060, "mspike"),
+            (1120, "spike"),
+            (1200, "sblock"),
+            (1260, "mspike"),
+            (1320, "spike"),
+        ],
+    ),
+    (
+        34,
+        1500,
+        "smooth",
+        [
+            (0, 34),
+            (140, 34),
+            (141, 26),
+            (280, 26),
+            (360, 28),
+            (500, 34),
+            (501, 26),
+            (640, 26),
+            (641, 18),
+            (800, 18),
+            (900, 26),
+            (1040, 26),
+            (1180, 34),
+            (1181, 26),
+            (1320, 26),
+            (1321, 18),
+            (1440, 26),
+            (1500, 34),
+        ],
+        [
+            (50, "spike"),
+            (100, "sblock"),
+            (180, "mspike"),
+            (240, "spike"),
+            (320, "sblock"),
+            (400, "mspike"),
+            (460, "spike"),
+            (540, "sblock"),
+            (600, "mspike"),
+            (700, "spike"),
+            (760, "sblock"),
+            (840, "mspike"),
+            (920, "sblock"),
+            (1000, "spike"),
+            (1080, "mspike"),
+            (1140, "sblock"),
+            (1220, "mspike"),
+            (1280, "spike"),
+            (1360, "sblock"),
+            (1420, "mspike"),
+            (1470, "spike"),
+        ],
+    ),
 ]
 
 
@@ -1040,6 +1392,41 @@ def ground_at(terrain: list[tuple[int, int]], x: int, mode: str) -> int:
     return terrain[-1][1]
 
 
+def flip_count(diff: int) -> int:
+    if 17 <= diff <= 21:
+        return 2
+    if diff == 22:
+        return 3
+    if diff == 23:
+        return 4
+    if diff == 24:
+        return 5
+    if diff in (31, 32):
+        return 2
+    if diff in (33, 34):
+        return 3
+    return 0
+
+
+def flip_at(length: int, flips: int, i: int) -> int:
+    return length * (2 * i + 1) // (2 * flips)
+
+
+def inverted_at(length: int, flips: int, x: int) -> bool:
+    if flips == 0:
+        return False
+    passed = sum(1 for i in range(flips) if x >= flip_at(length, flips, i))
+    return passed % 2 == 1
+
+
+def surface_at(terrain, x: int, mode: str, length: int, flips: int) -> tuple[int, bool]:
+    g = ground_at(terrain, x, mode)
+    inv = inverted_at(length, flips, x)
+    if inv:
+        return (VIEW_H - 1) - g, True
+    return g, False
+
+
 def render_level(diff: int, length: int, mode: str, terrain, obstacles) -> Image.Image:
     sx, sy = 3, 4
     margin_l, margin_t, margin_b = 28, 36, 28
@@ -1048,6 +1435,7 @@ def render_level(diff: int, length: int, mode: str, terrain, obstacles) -> Image
     h = margin_t + play_h + margin_b
     img = Image.new("RGB", (w, h), (18, 18, 22))
     d = ImageDraw.Draw(img)
+    flips = flip_count(diff)
 
     def wx(x: int) -> int:
         return margin_l + x * sx
@@ -1063,50 +1451,88 @@ def render_level(diff: int, length: int, mode: str, terrain, obstacles) -> Image
         d.text((px + 2, margin_t - 14), str(x), fill=(110, 110, 120))
 
     for x in range(length + 1):
-        gy = ground_at(terrain, x, mode)
-        d.rectangle([wx(x), wy(gy), wx(x + 1), wy(VIEW_H)], fill=(40, 42, 50))
+        surf, inv = surface_at(terrain, x, mode, length, flips)
+        if inv:
+            d.rectangle([wx(x), wy(0), wx(x + 1), wy(surf)], fill=(40, 42, 50))
+        else:
+            d.rectangle([wx(x), wy(surf), wx(x + 1), wy(VIEW_H)], fill=(40, 42, 50))
 
-    pts = [(wx(x), wy(ground_at(terrain, x, mode))) for x in range(0, length + 1, 2)]
-    if len(pts) >= 2:
-        d.line(pts, fill=(200, 205, 215), width=2)
+    # Break the contour at gravity seams so floor/ceiling don't connect with a slash.
+    segs: list[list[tuple[int, int]]] = [[]]
+    prev_inv = False
+    for x in range(0, length + 1, 2):
+        surf, inv = surface_at(terrain, x, mode, length, flips)
+        if segs[-1] and inv != prev_inv:
+            segs.append([])
+        segs[-1].append((wx(x), wy(surf)))
+        prev_inv = inv
+    for seg in segs:
+        if len(seg) >= 2:
+            d.line(seg, fill=(200, 205, 215), width=2)
 
-    g0 = ground_at(terrain, PLAYER_SX, mode)
-    cx, cy = wx(PLAYER_SX), wy(g0 - CUBE)
+    g0, inv0 = surface_at(terrain, PLAYER_SX, mode, length, flips)
+    cx = wx(PLAYER_SX)
+    cy = wy(g0 if inv0 else g0 - CUBE)
     d.rectangle([cx, cy, cx + CUBE * sx - 1, cy + CUBE * sy - 1], fill=(120, 220, 140), outline=(200, 255, 210))
     d.text((cx, cy - 12), "START", fill=(120, 220, 140))
 
     for x, kind in obstacles:
-        mid = x + (SPIKE_W if kind == "spike" else BLOCK_W) // 2
-        floor = ground_at(terrain, mid, mode)
+        is_spike = kind in ("spike", "mspike")
+        mid = x + (SPIKE_W if is_spike else BLOCK_W) // 2
+        surf, inv = surface_at(terrain, mid, mode, length, flips)
         px = wx(x)
         if kind == "spike":
-            d.polygon([
-                (px + SPIKE_W * sx // 2, wy(floor - SPIKE_H)),
-                (px, wy(floor)),
-                (px + SPIKE_W * sx, wy(floor)),
-            ], fill=(230, 80, 80))
+            if inv:
+                d.polygon([
+                    (px + SPIKE_W * sx // 2, wy(surf + SPIKE_H)),
+                    (px, wy(surf)),
+                    (px + SPIKE_W * sx, wy(surf)),
+                ], fill=(230, 80, 80))
+            else:
+                d.polygon([
+                    (px + SPIKE_W * sx // 2, wy(surf - SPIKE_H)),
+                    (px, wy(surf)),
+                    (px + SPIKE_W * sx, wy(surf)),
+                ], fill=(230, 80, 80))
+        elif kind == "mspike":
+            if inv:
+                d.polygon([
+                    (px + SPIKE_W * sx // 2, wy(surf + SPIKE_H)),
+                    (px, wy(surf)),
+                    (px + SPIKE_W * sx, wy(surf)),
+                ], outline=(255, 180, 80))
+                d.line([wx(x - 8), wy(surf - 2), wx(x + SPIKE_W + 8), wy(surf - 2)], fill=(255, 180, 80))
+            else:
+                d.polygon([
+                    (px + SPIKE_W * sx // 2, wy(surf - SPIKE_H)),
+                    (px, wy(surf)),
+                    (px + SPIKE_W * sx, wy(surf)),
+                ], outline=(255, 180, 80))
+                d.line([wx(x - 8), wy(surf + 2), wx(x + SPIKE_W + 8), wy(surf + 2)], fill=(255, 180, 80))
+        elif kind == "sblock":
+            if inv:
+                d.rectangle([px, wy(surf), px + BLOCK_W * sx - 1, wy(surf + BLOCK_H) - 1], outline=(120, 255, 200), width=2)
+            else:
+                d.rectangle([px, wy(surf - BLOCK_H), px + BLOCK_W * sx - 1, wy(surf) - 1], outline=(120, 255, 200), width=2)
         else:
-            d.rectangle([px, wy(floor - BLOCK_H), px + BLOCK_W * sx - 1, wy(floor) - 1], fill=(90, 140, 255), outline=(180, 200, 255))
+            if inv:
+                d.rectangle([px, wy(surf), px + BLOCK_W * sx - 1, wy(surf + BLOCK_H) - 1], fill=(90, 140, 255), outline=(180, 200, 255))
+            else:
+                d.rectangle([px, wy(surf - BLOCK_H), px + BLOCK_W * sx - 1, wy(surf) - 1], fill=(90, 140, 255), outline=(180, 200, 255))
 
-    flips = 0
-    if 17 <= diff <= 21:
-        flips = 2
-    elif diff == 22:
-        flips = 3
-    elif diff == 23:
-        flips = 4
-    elif diff == 24:
-        flips = 5
+    # Gravity flip markers: thick dotted vertical lines (1 on, 3 off), 3px wide.
     for i in range(flips):
-        fx = length * (2 * i + 1) // (2 * flips)
+        fx = flip_at(length, flips, i)
         px = wx(fx)
         for y in range(0, VIEW_H, 4):
-            d.point((px, wy(y)), fill=(180, 220, 255))
+            y0 = wy(y)
+            y1 = wy(min(y + 1, VIEW_H)) - 1
+            d.rectangle([px - 1, y0, px + 1, y1], fill=(180, 220, 255))
 
     fx = wx(length)
     d.line([fx, margin_t, fx, wy(VIEW_H)], fill=(255, 220, 80), width=3)
     d.text((fx - 36, margin_t - 14), f"END {length}", fill=(255, 220, 80))
-    d.text((margin_l, h - 20), "green=start   red=spike   blue=block   yellow=finish   grey=terrain", fill=(150, 150, 160))
+    d.text((margin_l, h - 20), "green=start  red=spike  orange-outline=mspike  blue=block  cyan-outline=sblock  cyan-dots=gravity  yellow=finish", fill=(150, 150, 160))
     return img
 
 

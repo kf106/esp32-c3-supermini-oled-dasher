@@ -1026,7 +1026,6 @@ const O23: &[Obstacle] = &[
     Obstacle { x: 510, kind: Kind::Spike },
     Obstacle { x: 590, kind: Kind::Block },
     Obstacle { x: 670, kind: Kind::Spike },
-    Obstacle { x: 750, kind: Kind::Spike },
     Obstacle { x: 840, kind: Kind::Block },
     Obstacle { x: 940, kind: Kind::Spike },
     Obstacle { x: 1040, kind: Kind::Spike },

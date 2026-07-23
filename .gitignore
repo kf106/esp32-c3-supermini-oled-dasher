@@ -1,1 +1,3 @@
 /firmware/target/
+__pycache__/
+*.pyc
